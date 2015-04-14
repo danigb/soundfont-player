@@ -1,7 +1,6 @@
 'use strict';
 
-var get = require('../utils/get.js');
-var base64DecodeToArray = require('../utils/base64decode.js');
+var base64DecodeToArray = require('./lib/b64decode.js');
 
 function get(url) {
   return new Promise(function(done, reject) {
@@ -11,15 +10,13 @@ function get(url) {
     req.onload = function() {
       if (req.status == 200) {
         done(req.response);
-      }
-      else {
+      } else {
         reject(Error(req.statusText));
       }
     };
     req.onerror = function() {
       reject(Error("Network Error"));
     };
-
     req.send();
   });
 }
@@ -47,7 +44,6 @@ function addNote(instrument, key, buffer) {
   };
 }
 
-
 function decodeNotes(instrument, data) {
   var promises = Object.keys(data).map(function(key) {
     return decodeNoteAudioData(instrument.context, data[key])
@@ -61,16 +57,16 @@ function decodeNotes(instrument, data) {
 
 function soundfont(ctx, name) {
   return new Promise(function (done, reject) {
-    var url = soundfont.getURL(name);
+    var url = soundfont.instrumentURL(name);
     return get(url)
       .then(JSON.parse)
       .then(function(data) {
-        return decodeNotes(ctx, data);
+        return soundfount.load(ctx, data);
       });
   });
 }
 
-soundfont.getURL = function(name) {
+soundfont.instrumentURL = function(name) {
   return 'https://raw.githubusercontent.com/gleitz/midi-js-soundfonts/master/FluidR3_GM/' + name + '-ogg.js';
 }
 soundfont.load = function(ctx, data) {
