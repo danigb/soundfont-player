@@ -1,14 +1,14 @@
 {
-  "name": "soundfont-loader",
+  "name": "soundfont-player",
   "version": "0.1.0",
   "description": "Lightweight soundfont (music instrument) loader for WebAudio.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node_modules/.bin/jasmine"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/danigb/soundfont-loader"
+    "url": "https://github.com/danigb/soundfont-player"
   },
   "keywords": [
     "music",
@@ -22,5 +22,8 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/danigb/soundfont-loader/issues"
+  },
+  "devDependencies": {
+    "jasmine": "^2.2.1"
   }
 }
