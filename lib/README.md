@@ -1,21 +1,21 @@
 soundfont-player
 ================
 
-Simple soundfont loader for playing sounds using WebAudio API. A simpler and
-lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js)
+Simple soundfont loader for playing sounds using WebAudio API. A much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js)
 
-Ready to use with Benjamin Gleitzman's package of
-[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
-and [RawGit](https://rawgit.com/)
+Works out of the box with Benjamin Gleitzman's package of
+[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). Just load the library and play.
 
 ## Usage
 
-Load the library:
+Load the library...
+
 ```html
 <script src="soundfont-player.js">
 ```
 
-Or require it using a npm package compatible environment (webpack, browserify):
+... or require it using a npm package compatible environment (webpack, browserify):
+
 ```js
 var soundfont = require('soundfont-player');
 ```
@@ -45,12 +45,27 @@ soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
 });
 ```
 
-You can change the url:
+or you can change the url:
 ```js
 soundfont.url = function(instName) { return '/' + instName + '-ogg.js'; }
 ```
 
 Basically, thats all.
+
+## Run the example and build the library
+
+To build the library from source:
+```bash
+npm install
+webpack
+```
+
+To run the examples:
+```bash
+webpack-dev-server
+```
+
+And open `http://localhost:8080/example`
 
 ## Instruments available
 
@@ -184,3 +199,7 @@ voice_oohs
 whistle
 woodblock
 xylophone
+
+## License
+
+MIT License

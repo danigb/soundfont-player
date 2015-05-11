@@ -2,13 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title></title>
+  <title>Soundfont-loader example</title>
 </head>
 <body>
   <div id="app">
-    <input type="text" id="notes" value="C2 D2 E2 E3 F2 G2 A2 B2" />
+    <input type="text" id="notes" value="C4 D4 E4 F4 G4 A4 B4 C5" />
     <a href="#" id="play">Play</a> |
   </div>
-  <script src="/example.js"></script>
+  <script src="/dist/soundfont-loader.js"></script>
+  <script>
+    var ctx = new AudioContext();
+    var piano = null;
+
+    var notesField = document.getElementById('notes');
+    document.getElementById('play').addEventListener("click", function(e) {
+      e.preventDefault();
+      console.log("PLAY", piano);
+      if(!piano) return;
+      var time = ctx.currentTime + 0.1;
+      notesField.value.split(" ").forEach(function(note) {
+        piano.play(note, time);
+        console.log("play", note, time);
+        time += 0.5;
+      });
+    });
+
+    soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
+      piano = instrument;
+      console.log("Ready");
+    });
+  </script>
+
 </body>
 </html>
