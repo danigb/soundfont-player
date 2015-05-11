@@ -60,9 +60,10 @@ npm install
 webpack
 ```
 
-To run the examples:
+Start a server on `.`. For example:
 ```bash
-webpack-dev-server
+npm install -g http-server
+http-server
 ```
 
 And open `http://localhost:8080/example`
