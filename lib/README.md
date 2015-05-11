@@ -52,25 +52,6 @@ soundfont.url = function(instName) { return '/' + instName + '-ogg.js'; }
 
 Basically, thats all.
 
-## Run the example and build the library
-
-To build the library from source:
-```bash
-npm install
-webpack
-```
-
-To run the examples:
-```bash
-webpack-dev-server
-```
-
-And open `http://localhost:8080/example`
-
-## License
-
-MIT License
-
 ## Instruments available
 
 Just copy and paste:
