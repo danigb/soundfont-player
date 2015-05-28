@@ -3,11 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <title>Soundfont-loader example</title>
+  <style>
+    input[type="text"] {
+      width: 90%;
+      display: block;
+      font-size: 24px;
+    }
+  </style>
 </head>
 <body>
   <div id="app">
-    <input type="text" id="notes" value="C4 D4 E4 F4 G4 A4 B4 C5" />
-    <a href="#" id="play">Play</a> |
+    <input type="text" id="notes" value="" />
+    <a href="#" id="play">Play it</a>
   </div>
   <script src="/dist/soundfont-loader.js"></script>
   <script>
@@ -15,21 +22,22 @@
     var piano = null;
 
     var notesField = document.getElementById('notes');
+    notesField.value = "C4 C#4 D4 D#4 E4 F4 F#4 G4 G#4 A4 A#4 B4 C5 "
+      + "B4 Bb4 A4 Ab4 G4 Gb4 F4 E4 Eb4 D4 Db4 C4";
     document.getElementById('play').addEventListener("click", function(e) {
       e.preventDefault();
-      console.log("PLAY", piano);
       if(!piano) return;
       var time = ctx.currentTime + 0.1;
       notesField.value.split(" ").forEach(function(note) {
+        console.log("Scheduling...", note, time);
         piano.play(note, time);
-        console.log("play", note, time);
-        time += 0.5;
+        time += 0.2;
       });
     });
 
     soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
       piano = instrument;
-      console.log("Ready");
+      console.log("Ready", piano.buffers);
     });
   </script>
 

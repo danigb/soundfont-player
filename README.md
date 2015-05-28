@@ -11,7 +11,7 @@ Works out of the box with Benjamin Gleitzman's package of
 Load the library...
 
 ```html
-<script src="soundfont-player.js">
+<script src="soundfont-player.js"></script>
 ```
 
 ... or require it using a npm package compatible environment (webpack, browserify):
@@ -38,6 +38,7 @@ Basically it fetches the instruments from https://github.com/gleitz/midi-js-soun
 ## Configuration
 
 You can get just the buffer:
+
 ```js
 var ctx = new AudioContext();
 soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
@@ -54,19 +55,14 @@ Basically, thats all.
 
 ## Run the example and build the library
 
-To build the library from source:
-```bash
-npm install
-webpack
-```
+The `dist` folder contains ready to use file for browser. You can run the example starting a local http server. For example:
 
-Start a server on `.`. For example:
 ```bash
 npm install -g http-server
 http-server
 ```
 
-And open `http://localhost:8080/example`
+And open [http://localhost:8080/example](http://localhost:8080/example)
 
 ## Instruments available
 
