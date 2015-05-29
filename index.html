@@ -8,20 +8,23 @@
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
     <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <style>
+      input[type="text"] {
+        width: 90%;
+        display: block;
+        margin: 0.5em 0;
+      }
+    </style>
   </head>
   <body>
     <section class="page-header">
       <h1 class="project-name">Soundfont-player</h1>
       <h2 class="project-tagline">Quick soundfont loader for browser</h2>
       <a href="https://github.com/danigb/soundfont-player" class="btn">View on GitHub</a>
-      <a href="https://github.com/danigb/soundfont-player/zipball/master" class="btn">Download .zip</a>
-      <a href="https://github.com/danigb/soundfont-player/tarball/master" class="btn">Download .tar.gz</a>
+      <a href="https://raw.githubusercontent.com/danigb/soundfont-player/master/dist/soundfont-loader.min.js" class="btn">soundfont-player.min.js (3.6kb)</a>
     </section>
 
     <section class="main-content">
-      <h1>
-<a id="soundfont-player" class="anchor" href="#soundfont-player" aria-hidden="true"><span class="octicon octicon-link"></span></a>soundfont-player</h1>
-
 <p>Simple soundfont loader for playing sounds using WebAudio API. A much simpler and lightweight replacement for <a href="https://github.com/mudcube/MIDI.js">MIDI.js</a></p>
 
 <p>Works out of the box with Benjamin Gleitzman's package of
@@ -48,21 +51,21 @@ soundfont(ctx, <span class="pl-s"><span class="pl-pds">'</span>acoustic_grand_pi
 <p>It uses Promise(s), so a modern browser is required.</p>
 
 <h2>
-<a id="demo" class="anchor" href="#demo" aria-hidden="true"><span class="octicon octicon-link"></span></a> Demo</h2>
+<a id="demo" class="anchor" href="#demo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Demo</h2>
+
+<div id="app">
+  Edit this list of notes:
+  <input type="text" id="notes" value="" />
+  And <a href="#" id="play">play!</a>
+</div>
 
 <h2>
 <a id="instruments-available" class="anchor" href="#instruments-available" aria-hidden="true"><span class="octicon octicon-link"></span></a>Instruments available</h2>
 
 <p>Just copy and paste:</p>
 
-<pre><code>accordion
-acoustic_bass
-acoustic_grand_piano
-acoustic_guitar_nylon
-acoustic_guitar_steel
-agogo
-alto_sax
-applause
+<code>accordion acoustic_bass acoustic_grand_piano acoustic_guitar_nylon
+acoustic_guitar_steel agogo alto_sax applause
 bagpipe
 banjo
 baritone_sax
@@ -183,7 +186,7 @@ voice_oohs
 whistle
 woodblock
 xylophone
-</code></pre>
+</code>
 
 <h2>
 <a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
@@ -198,6 +201,30 @@ xylophone
 
     </section>
 
+    <script type="text/javascript" src="/soundfont-loader.min.js"></script>
+    <script>
+      var ctx = new AudioContext();
+      var piano = null;
+      var notesField = document.getElementById('notes');
+      notesField.value = "C4 C#4 D4 D#4 E4 F4 F#4 G4 G#4 A4 A#4 B4 C5 "
+        + "B4 Bb4 A4 Ab4 G4 Gb4 F4 E4 Eb4 D4 Db4 C4";
+      document.getElementById('play').addEventListener("click", function(e) {
+        e.preventDefault();
+        if(!piano) return;
+        var time = ctx.currentTime + 0.1;
+        notesField.value.split(" ").forEach(function(note) {
+          console.log("Scheduling...", note, time);
+          piano.play(note, time);
+          time += 0.2;
+        });
+      });
+      soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
+        piano = instrument;
+        console.log("Ready", piano.buffers);
+      });
+    </script>
+
+
             <script type="text/javascript">
             var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
             document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
@@ -211,4 +238,3 @@ xylophone
 
   </body>
 </html>
-
