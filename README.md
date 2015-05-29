@@ -37,16 +37,19 @@ Basically it fetches the instruments from https://github.com/gleitz/midi-js-soun
 
 ## Configuration
 
-You can get just the buffer:
+Maybe you just want the buffers and make your own instrument. In that case you can access the `buffers` property of instrument. It is a hash with all the notes decoded as audio buffer.
+
+Since not all notes are mapped to buffers (for example, not sharps only flats) the soundfont.noteToBufferName returns the buffer name for the given note.
 
 ```js
 var ctx = new AudioContext();
 soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
-  instrument.buffer
+  instrument.buffers; // => a hash of named audio buffers
+  instrument.buffers[soundfont.noteToBufferName('C#3')]; // => an audio buffer
 });
 ```
 
-or you can change the url:
+Overrinding `soundfont.url` you can change the URL associated to a given instrument name:
 ```js
 soundfont.url = function(instName) { return '/' + instName + '-ogg.js'; }
 ```

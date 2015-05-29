@@ -1,6 +1,6 @@
 {
   "name": "soundfont-player",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Lightweight soundfont (music instrument) loader for WebAudio.",
   "main": "soundfont.js",
   "scripts": {
@@ -24,6 +24,5 @@
     "url": "https://github.com/danigb/soundfont-loader/issues"
   },
   "dependencies": {
-    "note-parser": "^0.5.0"
   }
 }
