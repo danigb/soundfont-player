@@ -4,7 +4,7 @@ soundfont-player
 Simple soundfont loader for playing sounds using WebAudio API. A much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js)
 
 Works out of the box with Benjamin Gleitzman's package of
-[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). Just load the library and play.
+[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). Just load the library and play. Try the [demo](http://danigb.github.io/soundfont-player/#demo)
 
 ## Usage
 
