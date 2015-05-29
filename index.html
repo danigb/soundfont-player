@@ -213,14 +213,12 @@ xylophone
         if(!piano) return;
         var time = ctx.currentTime + 0.1;
         notesField.value.split(" ").forEach(function(note) {
-          console.log("Scheduling...", note, time);
           piano.play(note, time);
           time += 0.2;
         });
       });
       soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
         piano = instrument;
-        console.log("Ready", piano.buffers);
       });
     </script>
 
