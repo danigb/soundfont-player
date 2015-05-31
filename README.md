@@ -50,9 +50,9 @@ It uses Promises and the Web Audio API.
 
 ### Soundfont(audioContext)
 
-Create a soundfont object.
+Create a soundfont object. The soundfont object has two methods:
 
-### soundfont.instrument(instName)
+#### soundfont.instrument(instName)
 
 Returns an instrument with the given instrument name (take a look to all the names below).
 All the instruments has a play method with the form: `play(noteName, time, duration [, options])`.
@@ -79,9 +79,9 @@ var inst = soundfont.instrument();
 inst.play('c2', 1, 0.5);
 ```
 
-### soundfont.onready(callback)
+#### soundfont.onready(callback)
 
-The callback is fired when all the instruments are loaded:
+The callback is fired when __all__ the instruments are loaded:
 
 ```js
 var harmonics = soundfont.instrument('guitar_harmonics');
