@@ -104,6 +104,7 @@ function Soundfont(audioContext) {
   if(!(this instanceof Soundfont)) return new Soundfont(audioContext);
   this.ctx = audioContext;
   this.instruments = {};
+  this.promises = [];
 }
 
 Soundfont.prototype.instrument = function (name) {
@@ -116,12 +117,17 @@ Soundfont.prototype.instrument = function (name) {
       var realInst = createInstrument(ctx, name, buffers);
       inst.play = realInst.play;
     });
+    this.promises.push(promise);
     inst.onready = function(callback) {
       return promise.then(callback);
     };
     this.instruments[name] = inst;
   }
   return inst;
+};
+
+Soundfont.prototype.onready = function (callback) {
+  Promise.all(this.promises).then(callback);
 };
 
 Soundfont.noteToMidi = function(note) {
@@ -257,10 +263,11 @@ function createDefaultInstrument(context, name) {
     play: function(note, time, duration, options) {
       note = parseNote(note);
       options = options || {};
-      var gain = options.gain || 0.5;
+      var gain = options.gain || 0.2;
+      var vcoType = options.vcoType || 'sine';
 
       var vco = context.createOscillator();
-      vco.type = vco.SINE;
+      vco.type = vcoType;
       vco.frequency.value = note.freq;
 
       /* VCA */

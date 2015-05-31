@@ -55,7 +55,7 @@ Create a soundfont object.
 ### soundfont.instrument(instName)
 
 Returns an instrument with the given instrument name (take a look to all the names below).
-All the instruments has a play method with the form: `instrument.play(noteName, time, duration, options)`.
+All the instruments has a play method with the form: `play(noteName, time, duration [, options])`.
 
 You can use the `instrument.onready` method to know when the instrument is loaded.
 If you play the instrument before its loaded, a simple sine oscillator is used
@@ -77,6 +77,20 @@ You can pass `null` to get the default sine oscillator instrument:
 ```js
 var inst = soundfont.instrument();
 inst.play('c2', 1, 0.5);
+```
+
+### soundfont.onready(callback)
+
+The callback is fired when all the instruments are loaded:
+
+```js
+var harmonics = soundfont.instrument('guitar_harmonics');
+var sax = soundfont.instrument('soprano_sax');
+soundfont.onready(function() {
+  console.log('Guitar harmonics and Sax ready.');
+  harmonics.play('c3', 1, 1);
+  sax.play('e2', 1, 1);
+});
 ```
 
 ### Soundfont.loadBuffers(audioContext, instName)

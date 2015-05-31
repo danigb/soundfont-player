@@ -12,7 +12,7 @@ function stub() {
   return stub;
 }
 var audioContext = {};
-var osc = { SINE: 'sine', frequency: { value: -1 },
+var osc = { frequency: { value: -1 },
   connect: stub(), start: stub(), stop: stub()};
 var gain = { gain: { value: -1 }, connect: stub() };
 audioContext.createOscillator = function() { return osc; };

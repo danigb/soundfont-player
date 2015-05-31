@@ -1,3 +1,8 @@
+[0.4.0]
+- Add soundfont.onready
+- Fix a bug with vco oscillator
+- Amplitude of oscillator is now similar to soundfont notes
+
 [0.3.0]
 - Move to a class based library
 - Default instrument with a sine oscillator
