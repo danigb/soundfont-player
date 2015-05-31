@@ -129,7 +129,13 @@ And open [http://localhost:8080/example](http://localhost:8080/example)
 
 ## Instruments available
 
-Just copy and paste:
+You can grab a json file with all the instruments:
+
+```js
+var instrumentNames = require('soundfont-player/instruments.json');
+```
+
+Or just copy and paste ;-) :
 
 accordion
 acoustic_bass
