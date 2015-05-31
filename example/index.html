@@ -25,26 +25,20 @@
   <script src="/dist/soundfont-loader.js"></script>
   <script>
     var ctx = new AudioContext();
-    var notesField = document.getElementById("notes");
+    var soundfont = new Soundfont(ctx);
+    var inst = soundfont.instrument();
 
+    var notesField = document.getElementById("notes");
     notesField.value = "C4 C#4 D4 D#4 E4 F4 F#4 G4 G#4 A4 A#4 B4 C5 B4 Bb4 A4 Ab4 G4 Gb4 F4 E4 Eb4 D4 Db4 C4";
-    document.querySelector("button[action=play]").addEventListener("click", function(e) {
-      var selectedInstrumentEl = document.querySelector("input[name=instruments]:checked");
-      var instrumentName = selectedInstrumentEl ? selectedInstrumentEl.value : "acoustic_grand_piano";
-      var btn = e.currentTarget;
-      btn.setAttribute("disabled", true);
-      soundfont(ctx, instrumentName).then(function(instrument) {
-        btn.removeAttribute("disabled");
-        console.log("Ready", instrument.buffers);
-        var time = ctx.currentTime + 0.1;
-        notesField.value.split(" ").forEach(function(note) {
-          console.log("Scheduling...", note, time);
-          instrument.play(note, time);
-          time += 0.2;
-        });
-      }, function () {
-        console.error("cannot load instrument ", instrumentName);
-        btn.removeAttribute("disabled");
+
+    var btn = document.querySelector("button[action=play]");
+    btn.setAttribute("disabled", true);
+    btn.addEventListener("click", function(e) {
+      var time = ctx.currentTime + 0.1;
+      notesField.value.split(" ").forEach(function(note) {
+        console.log("Scheduling...", note, time);
+        inst.play(note, time, 0.2);
+        time += 0.2;
       });
     });
 
@@ -63,6 +57,17 @@
         radio.setAttribute("name", "instruments");
         radio.setAttribute("type", "radio");
         radio.setAttribute("value", instrumentName);
+        radio.addEventListener("change", function(e) {
+          btn.setAttribute("disabled", true);
+          var name = e.target.value;
+          console.log("Loading " + name + "...");
+          inst = soundfont.instrument(name);
+          console.log(inst);
+          inst.onready(function() {
+            console.log("Instrument " + name + " ready.");
+          });
+          btn.removeAttribute("disabled");
+        });
         label.appendChild(radio);
         label.appendChild(document.createTextNode(instrumentName));
         section.appendChild(label);

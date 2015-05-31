@@ -45,62 +45,107 @@ module.exports = base64DecodeToArray;
 },{}],2:[function(require,module,exports){
 'use strict';
 
-var base64DecodeToArray = require('./lib/b64decode.js');
-
+var NOTE = /^([a-gA-G])(#{0,2}|b{0,2})(-?\d{0,1})$/
 /*
- * Main funtion. Given a Web Audio context and a instrument name
- * load the instrument data and return a simple instrument
+ * parseNote
  *
- * @param {Object} ctx - A Web Audio context
- * @param {String} name - the sounfont instrument name
+ * @param {String} note - the note string to be parsed
+ * @return {Object} a object with the following attributes:
+ * - pc: pitchClass, the letter of the note, ALWAYS in lower case
+ * - acc: the accidentals (or '' if no accidentals)
+ * - oct: the octave as integer. By default is 4
  */
-function soundfont(ctx, name) {
-  return soundfont.get(soundfont.url(name))
-    .then(soundfont.parse)
-    .then(function(soundFont) {
-      return createInstrument(ctx, name, soundFont)
-    })
-    .then(decodeNotes)
-    .then(function(instruments) {
-      return instruments[0];
-    });
-}
+var parse = function(note, defaultOctave, defaultValue) {
+  var parsed, match;
+  if(typeof(note) === 'string' && (match = NOTE.exec(note))) {
+    var octave = match[3] !== '' ? +match[3] : (defaultOctave || 4);
+    parsed = { pc: match[1].toLowerCase(),
+      acc: match[2], oct: octave };
+  } else if(typeof(note.pc) !== 'undefined'
+    && typeof(note.acc) !== 'undefined'
+    && typeof(note.oct) !== 'undefined') {
+    parsed = note;
+  }
 
-/*
- * API: soundfont.url
- * Given an instrument name returns a URL to its soundfont js file
- *
- * @param {String} name - instrument name
- * @returns {String} the soundfont data url
- */
-soundfont.url = function(name) {
-  return 'https://cdn.rawgit.com/gleitz/midi-js-soundfonts/master/FluidR3_GM/' + name + '-ogg.js';
-}
-
-/*
- * API: soundfont.noteToBufferName
- * Given a note name, return a buffer name.
- *
- * @param {String} note - the note name, exampoles: c#2, Db4
- * @returns {String} the buffer name associated to that note
- */
-soundfont.noteToBufferName = function(note) {
-  var name = note.toLowerCase();
-  if(name.indexOf('#') > 0) {
-    name = name.replace(/#/g, 'b');
-    var pc = String.fromCharCode(name.charCodeAt(0) + 1);
-    pc = pc === 'h' ? 'a' : pc;
-    return pc + name.substring(1);
+  if (parsed) {
+    parsed.midi = parsed.midi || toMidi(parsed);
+    parsed.freq = parsed.freq || midiToFrequency(parsed.midi);
+    return parsed;
+  } else if (typeof(defaultValue) !== 'undefined') {
+    return defaultValue;
   } else {
-    return name;
+    throw Error("Invalid note format: " + note);
   }
 }
 
+parse.toString = function(obj) {
+  return obj.pc + obj.acc + obj.oct;
+}
+
+var SEMITONES = {c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }
+function toMidi(note) {
+  var alter = note.acc.length;
+  if(note.acc[0] === 'b') alter = -1 * alter;
+  return SEMITONES[note.pc] + alter + 12 * (note.oct + 1);
+}
+function midiToFrequency (note) {
+    return Math.pow(2, (note-69)/12)*440;
+}
+
+module.exports = parse;
+
+},{}],3:[function(require,module,exports){
+'use strict';
+
+var base64DecodeToArray = require('./lib/b64decode.js');
+var parseNote = require('note-parser');
+
+function Soundfont(audioContext) {
+  if(!(this instanceof Soundfont)) return new Soundfont(audioContext);
+  this.ctx = audioContext;
+  this.instruments = {};
+}
+
+Soundfont.prototype.instrument = function (name) {
+  if(!name) return createDefaultInstrument(this.ctx, "default");
+  var inst = this.instruments[name];
+  if(!inst) {
+    var ctx = this.ctx;
+    var inst = createDefaultInstrument(ctx, name);
+    var promise = Soundfont.loadBuffers(ctx, name).then(function(buffers) {
+      var realInst = createInstrument(ctx, name, buffers);
+      inst.play = realInst.play;
+    });
+    inst.onready = function(callback) {
+      return promise.then(callback);
+    };
+    this.instruments[name] = inst;
+  }
+  return inst;
+};
+
+Soundfont.noteToMidi = function(note) {
+  return parseNote(note).midi;
+}
+
 /*
- * Send a GET request to the url and return a Promise
+ * Soundfont.nameToUrl
+ * Given an instrument name returns a URL to its Soundfont js file
+ *
+ * @param {String} name - instrument name
+ * @returns {String} the Soundfont data url
+ */
+Soundfont.nameToUrl = function(name) {
+  return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-ogg.js';
+}
+
+/*
+ * SoundFont.getScript
+ *
+ * Given a script URL returns a Promise with the script contents as text
  * @param {String} url - the URL
  */
-soundfont.get = function(url) {
+Soundfont.loadData = function(url) {
   return new Promise(function(done, reject) {
     var req = new XMLHttpRequest();
     req.open('GET', url);
@@ -126,64 +171,73 @@ soundfont.get = function(url) {
  * @param {String} data - the SoundFont js file content
  * @returns {JSON} the parsed data as JSON object
  */
-soundfont.parse = function(data) {
+Soundfont.dataToJson = function(data) {
   var begin = data.indexOf("MIDI.Soundfont.");
   begin = data.indexOf('=', begin) + 2;
   var end = data.lastIndexOf(',');
   return JSON.parse(data.slice(begin, end) + "}");
 }
 
-/*
- * PRIVATE: Create a instrument object.
- *
- * @param {Object} ctx - Web Audio context
- * @param {String} note - The note name
- * @param {Object} data - The soundfont instrument data as JSON
- */
-function createInstrument(ctx, note, data) {
-  var instrument = { ctx: ctx, note: note, data: data };
-  instrument.buffers = {};
-  instrument.play = function(note, time, duration) {
-    var bufferName = soundfont.noteToBufferName(note);
-    var source = ctx.createBufferSource();
-    var buffer = instrument.buffers[bufferName];
-    if(!buffer) {
-      console.log("WARNING: Note buffer not found", note, bufferName);
-      return;
-    }
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(time);
-    if(duration) source.stop(time + duration)
-    return source;
-  }
 
-  return instrument;
+/*
+ * loadBuffers
+ *
+ * Given a Web Audio context and a instrument name
+ * load the instrument data and return a hash of audio buffers
+ *
+ * @param {Object} ctx - A Web Audio context
+ * @param {String} name - the sounfont instrument name
+ */
+Soundfont.loadBuffers = function(ctx, name) {
+  return Promise.resolve(name)
+    .then(Soundfont.nameToUrl)
+    .then(Soundfont.loadData)
+    .then(Soundfont.dataToJson)
+    .then(function(jsonData) {
+      return createBank(ctx, name, jsonData)
+    })
+    .then(decodeBank)
+    .then(function(bank) {
+      return bank.buffers;
+    });
 }
 
 /*
- * INTENAL: decodeNotes
+ * @param {Object} ctx - Web Audio context
+ * @param {String} name - The bank name
+ * @param {Object} data - The Soundfont instrument data as JSON
+ */
+function createBank(ctx, name, data) {
+  var bank = { ctx: ctx, name: name, data: data };
+  bank.buffers = {};
+
+  return bank;
+}
+
+/*
+ * INTENAL: decodeBank
  * Given an instrument, returns a Promise that resolves when
  * all the notes from de instrument are decoded
  */
-function decodeNotes(instrument) {
-  var promises = Object.keys(instrument.data).map(function(key) {
-    return decodeNoteAudioData(instrument.ctx, instrument.data[key])
+function decodeBank(bank) {
+  var promises = Object.keys(bank.data).map(function(note) {
+    return decodeNote(bank.ctx, bank.data[note])
     .then(function(buffer) {
-      instrument.buffers[key.toLowerCase()] = buffer;
-      return instrument;
+      note = parseNote(note);
+      bank.buffers[note.midi] = buffer;
     });
   });
 
-  return Promise.all(promises);
+  return Promise.all(promises).then(function() {
+    return bank;
+  })
 }
 
 /*
- * INTERNAL: decodeAudioData
  * Given a WAA context and a base64 encoded buffer data returns
  * a Promise that resolves when the buffer is decoded
  */
-function decodeNoteAudioData(context, data) {
+function decodeNote(context, data) {
   return new Promise(function(done, reject) {
     var decodedData = base64DecodeToArray(data.split(",")[1]).buffer;
     context.decodeAudioData(decodedData, function(buffer) {
@@ -194,9 +248,62 @@ function decodeNoteAudioData(context, data) {
   });
 }
 
+/*
+ * createDefaultInstrument
+ */
+function createDefaultInstrument(context, name) {
+  var instrument = {
+    name: name,
+    play: function(note, time, duration, options) {
+      note = parseNote(note);
+      options = options || {};
+      var gain = options.gain || 0.5;
 
-if (typeof define === "function" && define.amd) define(function() { return soundfont; });
-if (typeof module === "object" && module.exports) module.exports = soundfont;
-if (typeof window !== "undefined") window.soundfont = soundfont;
+      var vco = context.createOscillator();
+      vco.type = vco.SINE;
+      vco.frequency.value = note.freq;
 
-},{"./lib/b64decode.js":1}]},{},[2]);
+      /* VCA */
+      var vca = context.createGain();
+      vca.gain.value = 0.5;
+
+      /* Connections */
+      vco.connect(vca);
+      vca.connect(context.destination);
+
+      vco.start(time);
+      vco.stop(time + duration);
+      return vco;
+    }
+  }
+  return instrument;
+}
+
+function createInstrument(audioContext, name, buffers) {
+  var instrument = {
+    name: name,
+    play: function(note, time, duration) {
+      note = parseNote(note);
+      var buffer = buffers[note.midi];
+      if(!buffer) {
+        console.log("WARNING: Note buffer not found", note, bufferName);
+        return;
+      }
+      var source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(time);
+      if(duration) source.stop(time + duration)
+      return source;
+    }
+  }
+  return instrument;
+}
+
+
+
+if (typeof define === "function" && define.amd) define(function() { return Soundfont; });
+if (typeof module === "object" && module.exports) module.exports = Soundfont;
+if (typeof window !== "undefined") window.Soundfont = Soundfont;
+
+},{"./lib/b64decode.js":1,"note-parser":2}]},{},[3]);

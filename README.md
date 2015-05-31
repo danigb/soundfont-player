@@ -1,7 +1,11 @@
 soundfont-player
 ================
 
-Simple soundfont loader for playing sounds using WebAudio API. A much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js)
+Simple soundfont loader/player to use MIDI sounds in WebAudio API.
+The purpose of this project is to reduce as minimum the setup and code required
+to play MIDI sounds.
+
+It is a much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js)
 
 Works out of the box with Benjamin Gleitzman's package of
 [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). Just load the library and play. Try the [demo](http://danigb.github.io/soundfont-player/#demo)
@@ -17,44 +21,86 @@ Load the library...
 ... or require it using a npm package compatible environment (webpack, browserify):
 
 ```js
-var soundfont = require('soundfont-player');
+var Soundfont = require('soundfont-player');
 ```
 
-Then load the instrument and play:
+Create a Soundfont object:
 
 ```js
 var ctx = new AudioContext();
-soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
-  instrument.play('C4', 0);
-});
+var soundfont = new Soundfont(ctx);
 ```
 
-It uses Promise(s), so a modern browser is required.
+Then get the instrument and play:
+
+```js
+var instrument = soundfont.instrument('acoustic_grand_piano');
+instrument.onready(function() {
+  instrument.play('C4', 0);
+}
+```
 
 ## How it works
 
 Basically it fetches the instruments from https://github.com/gleitz/midi-js-soundfonts using https://rawgit.com, decode them and wrap in a simple buffer player.
 
-## Configuration
+It uses Promises and the Web Audio API.
 
-Maybe you just want the buffers and make your own instrument. In that case you can access the `buffers` property of instrument. It is a hash with all the notes decoded as audio buffer.
+## API
 
-Since not all notes are mapped to buffers (for example, not sharps only flats) the soundfont.noteToBufferName returns the buffer name for the given note.
+### Soundfont(audioContext)
+
+Create a soundfont object.
+
+### soundfont.instrument(instName)
+
+Returns an instrument with the given instrument name (take a look to all the names below).
+All the instruments has a play method with the form: `instrument.play(noteName, time, duration, options)`.
+
+You can use the `instrument.onready` method to know when the instrument is loaded.
+If you play the instrument before its loaded, a simple sine oscillator is used
+to generate the note:
 
 ```js
-var ctx = new AudioContext();
-soundfont(ctx, 'acoustic_grand_piano').then(function(instrument) {
-  instrument.buffers; // => a hash of named audio buffers
-  instrument.buffers[soundfont.noteToBufferName('C#3')]; // => an audio buffer
+var inst = soundfont.instrument('accordion');
+inst.play('c4', 2, 0.2); // => a sine wave sound
+inst.onready(function() {
+  inst.play('c4', 2, 0.2); // => a midi accordion sound
 });
 ```
 
-Overrinding `soundfont.url` you can change the URL associated to a given instrument name:
+The instruments are cached, so call `soundfont.instrument` twice with the same
+name only loads the instrument once.
+
+You can pass `null` to get the default sine oscillator instrument:
+
 ```js
-soundfont.url = function(instName) { return '/' + instName + '-ogg.js'; }
+var inst = soundfont.instrument();
+inst.play('c2', 1, 0.5);
 ```
 
-Basically, thats all.
+### Soundfont.loadBuffers(audioContext, instName)
+
+Returns a Promise with a buffers object. The buffers object map midi notes to
+audio buffers:
+
+```js
+Soundfont.loadBuffers(ctx, 'acoustic_grand_piano').then(function(buffers) {
+  buffers[Soundfont.noteToMidi('C4')] // => audio buffer of C4
+});
+```
+
+### Soundfont.noteToMidi(noteName)
+
+Returns the midi name of the note.
+
+## Configuration
+
+Overrinding `Soundfont.nameToUrl` you can change the URL associated to a given instrument name:
+```js
+Soundfont.nameToUrl= function(instName) { return '/' + instName + '-ogg.js'; }
+```
+
 
 ## Run the example and build the library
 

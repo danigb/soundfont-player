@@ -1,3 +1,9 @@
+[0.3.0]
+- Move to a class based library
+- Default instrument with a sine oscillator
+- Instruments play notes before the soundfont is loaded
+- Use note-parser to parase notes
+- Use midi numbers to map buffer notes
 
 [0.2.0]
 - Altered notes are correctly assigned to the buffer (issue #1)
