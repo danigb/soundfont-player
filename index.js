@@ -166,6 +166,12 @@ function createDefaultInstrument(context, name) {
     play: function(note, time, duration, options) {
       note = parseNote(note);
       options = options || {};
+
+      if(!((duration || duration === 0) || options.noStop)) {
+        console.log('WARNING: no duration specified; play canceled.');
+        return;
+      }
+
       var gain = options.gain || 0.2;
       var vcoType = options.vcoType || 'sine';
 
@@ -182,7 +188,7 @@ function createDefaultInstrument(context, name) {
       vca.connect(context.destination);
 
       vco.start(time);
-      vco.stop(time + duration);
+      if(duration) vco.stop(time + duration);
       return vco;
     }
   }
