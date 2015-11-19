@@ -3,11 +3,13 @@
 var base64DecodeToArray = require('./lib/b64decode.js');
 var parseNote = require('note-parser');
 
-function Soundfont (audioContext) {
+function Soundfont (audioContext, soundfontsUrlRoot, preferredExtension) {
   if (!(this instanceof Soundfont)) return new Soundfont(audioContext);
   this.ctx = audioContext;
   this.instruments = {};
   this.promises = [];
+  this.soundfontsUrlRoot = soundfontsUrlRoot;
+  this.preferredExtension = preferredExtension;
 }
 
 Soundfont.prototype.instrument = function (name) {
@@ -16,7 +18,7 @@ Soundfont.prototype.instrument = function (name) {
   if (!inst) {
     var ctx = this.ctx;
     inst = createDefaultInstrument(ctx, name);
-    var promise = Soundfont.loadBuffers(ctx, name).then(function (buffers) {
+    var promise = Soundfont.loadBuffers(ctx, name, this).then(function (buffers) {
       var realInst = createInstrument(ctx, name, buffers);
       inst.play = realInst.play;
     });
@@ -40,12 +42,16 @@ Soundfont.noteToMidi = function(note) {
 /*
  * Soundfont.nameToUrl
  * Given an instrument name returns a URL to its Soundfont js file
+ * (`this` may be bound to a `Soundfont` instance with its own
+ * urlRoot and extension; if not, defaults are used.)
  *
  * @param {String} name - instrument name
  * @returns {String} the Soundfont data url
  */
 Soundfont.nameToUrl = function(name) {
-  return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-ogg.js';
+  var urlRoot = this.soundfontsUrlRoot || 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/';
+  var extension = this.preferredExtension && this.preferredExtension === 'mp3' ? 'mp3' : 'ogg';
+  return urlRoot + name + '-' + extension + '.js';
 }
 
 /*
@@ -95,11 +101,15 @@ Soundfont.dataToJson = function(data) {
  * load the instrument data and return a hash of audio buffers
  *
  * @param {Object} ctx - A Web Audio context
- * @param {String} name - the sounfont instrument name
+ * @param {String} name - the soundfont instrument name
+ * @param {Soundfont} soundfont - the soundfont using the buffers (optional)
  */
-Soundfont.loadBuffers = function(ctx, name) {
+Soundfont.loadBuffers = function(ctx, name, soundfont) {
+  var nameToUrl = Soundfont.nameToUrl;
+  if (soundfont instanceof Soundfont) nameToUrl = nameToUrl.bind(soundfont);
+
   return Promise.resolve(name)
-    .then(Soundfont.nameToUrl)
+    .then(nameToUrl)
     .then(Soundfont.loadData)
     .then(Soundfont.dataToJson)
     .then(function(jsonData) {
