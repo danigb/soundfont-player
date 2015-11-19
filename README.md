@@ -69,6 +69,13 @@ inst.onready(function() {
 });
 ```
 
+If you want to control the note release manually you can pass `-1` as duration and call `stop`:
+
+```js
+note = inst.play('c4', 0, -1)
+note.stop(1) // stops after 1 second
+```
+
 The instruments are cached, so call `soundfont.instrument` twice with the same
 name only loads the instrument once.
 
@@ -118,7 +125,14 @@ Soundfont.nameToUrl= function(instName) { return '/' + instName + '-ogg.js'; }
 
 ## Run the example and build the library
 
-The `dist` folder contains ready to use file for browser. You can run the example starting a local http server. For example:
+The `dist` folder contains ready to use file for browser. You can build you own with:
+
+```bash
+npm run dist
+```
+
+
+To run the example start a local http server. For example:
 
 ```bash
 npm install -g http-server

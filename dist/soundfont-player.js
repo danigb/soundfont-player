@@ -4,25 +4,25 @@
 var base64DecodeToArray = require('./lib/b64decode.js');
 var parseNote = require('note-parser');
 
-function Soundfont(audioContext) {
-  if(!(this instanceof Soundfont)) return new Soundfont(audioContext);
+function Soundfont (audioContext) {
+  if (!(this instanceof Soundfont)) return new Soundfont(audioContext);
   this.ctx = audioContext;
   this.instruments = {};
   this.promises = [];
 }
 
 Soundfont.prototype.instrument = function (name) {
-  if(!name) return createDefaultInstrument(this.ctx, "default");
+  if (!name) return createDefaultInstrument(this.ctx, 'default');
   var inst = this.instruments[name];
-  if(!inst) {
+  if (!inst) {
     var ctx = this.ctx;
-    var inst = createDefaultInstrument(ctx, name);
-    var promise = Soundfont.loadBuffers(ctx, name).then(function(buffers) {
+    inst = createDefaultInstrument(ctx, name);
+    var promise = Soundfont.loadBuffers(ctx, name).then(function (buffers) {
       var realInst = createInstrument(ctx, name, buffers);
       inst.play = realInst.play;
     });
     this.promises.push(promise);
-    inst.onready = function(callback) {
+    inst.onready = function (callback) {
       return promise.then(callback);
     };
     this.instruments[name] = inst;
@@ -68,7 +68,7 @@ Soundfont.loadData = function(url) {
       }
     };
     req.onerror = function() {
-      reject(Error("Network Error"));
+      reject(Error('Network Error'));
     };
     req.send();
   });
@@ -82,10 +82,10 @@ Soundfont.loadData = function(url) {
  * @returns {JSON} the parsed data as JSON object
  */
 Soundfont.dataToJson = function(data) {
-  var begin = data.indexOf("MIDI.Soundfont.");
+  var begin = data.indexOf('MIDI.Soundfont.');
   begin = data.indexOf('=', begin) + 2;
   var end = data.lastIndexOf(',');
-  return JSON.parse(data.slice(begin, end) + "}");
+  return JSON.parse(data.slice(begin, end) + '}');
 }
 
 
@@ -149,11 +149,11 @@ function decodeBank(bank) {
  */
 function decodeNote(context, data) {
   return new Promise(function(done, reject) {
-    var decodedData = base64DecodeToArray(data.split(",")[1]).buffer;
+    var decodedData = base64DecodeToArray(data.split(',')[1]).buffer;
     context.decodeAudioData(decodedData, function(buffer) {
       done(buffer);
     }, function(e) {
-      reject("DecodeAudioData error", e);
+      reject('DecodeAudioData error', e);
     });
   });
 }
@@ -161,19 +161,14 @@ function decodeNote(context, data) {
 /*
  * createDefaultInstrument
  */
-function createDefaultInstrument(context, name) {
+function createDefaultInstrument (context, name) {
   var instrument = {
     name: name,
-    play: function(note, time, duration, options) {
+    play: function (note, time, duration, options) {
       note = parseNote(note);
+      duration = duration || 0.2;
       options = options || {};
 
-      if(!((duration || duration === 0) || options.noStop)) {
-        console.log('WARNING: no duration specified; play canceled.');
-        return;
-      }
-
-      var gain = options.gain || 0.2;
       var vcoType = options.vcoType || 'sine';
 
       var vco = context.createOscillator();
@@ -182,46 +177,44 @@ function createDefaultInstrument(context, name) {
 
       /* VCA */
       var vca = context.createGain();
-      vca.gain.value = 0.5;
+      vca.gain.value = options.gain || 0.5;
 
       /* Connections */
       vco.connect(vca);
       vca.connect(context.destination);
 
       vco.start(time);
-      if(duration) vco.stop(time + duration);
+      if (duration > 0) vco.stop(time + duration);
       return vco;
     }
-  }
+  };
   return instrument;
 }
 
-function createInstrument(audioContext, name, buffers) {
+function createInstrument (audioContext, name, buffers) {
   var instrument = {
     name: name,
-    play: function(note, time, duration) {
+    play: function (note, time, duration) {
       note = parseNote(note);
       var buffer = buffers[note.midi];
-      if(!buffer) {
-        console.log("WARNING: Note buffer not found", note, bufferName);
+      if (!buffer) {
+        console.log('WARNING: Note buffer not found', name, note);
         return;
       }
       var source = audioContext.createBufferSource();
       source.buffer = buffer;
       source.connect(audioContext.destination);
       source.start(time);
-      if(duration) source.stop(time + duration)
+      if (duration) source.stop(time + duration);
       return source;
     }
-  }
+  };
   return instrument;
 }
 
-
-
-if (typeof define === "function" && define.amd) define(function() { return Soundfont; });
-if (typeof module === "object" && module.exports) module.exports = Soundfont;
-if (typeof window !== "undefined") window.Soundfont = Soundfont;
+if (typeof define === 'function' && define.amd) define(function () { return Soundfont; });
+if (typeof module === 'object' && module.exports) module.exports = Soundfont;
+if (typeof window !== 'undefined') window.Soundfont = Soundfont;
 
 },{"./lib/b64decode.js":2,"note-parser":3}],2:[function(require,module,exports){
 'use strict';

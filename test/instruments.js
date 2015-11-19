@@ -5,26 +5,27 @@ var assert = require('assert');
 
 var Soundfont = require('../');
 
-function stub() {
-  var stub = function() {
+function stub () {
+  var stub = function () {
     stub.args = Array.prototype.slice.call(arguments);
-  }
+  };
   return stub;
 }
+
 var audioContext = {};
 var osc = { frequency: { value: -1 },
   connect: stub(), start: stub(), stop: stub()};
 var gain = { gain: { value: -1 }, connect: stub() };
-audioContext.createOscillator = function() { return osc; };
-audioContext.createGain = function() { return gain; };
+audioContext.createOscillator = function () { return osc; };
+audioContext.createGain = function () { return gain; };
 
 vows.describe('Audio Soundfont library').addBatch({
-  "Soundfont instance" :{
+  "Soundfont instance": {
     topic: function () {
       return new Soundfont(audioContext);
     },
 
-    "default instrument": function(soundfont) {
+    "default instrument": function (soundfont) {
       var instrument = soundfont.instrument();
       var note = instrument.play("A4", 1, 2, { gain: 0.7 });
       assert(typeof(note.stop) === 'function');

@@ -1,3 +1,6 @@
+[0.5.0]
+- Duration no longer required (thanks @benwiley4000).
+
 [0.4.0]
 - Add soundfont.onready
 - Fix a bug with vco oscillator
