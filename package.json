@@ -1,6 +1,6 @@
 {
   "name": "soundfont-player",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Lightweight soundfont (music instrument) loader and player for WebAudio API",
   "main": "index.js",
   "scripts": {
