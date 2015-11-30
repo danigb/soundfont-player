@@ -1,7 +1,7 @@
 soundfont-player
 ================
 
-Simple soundfont loader/player to use MIDI sounds in WebAudio API.
+A really simple soundfont loader/player to use MIDI sounds in WebAudio API.
 The purpose of this project is to reduce as minimum the setup and code required
 to play MIDI sounds.
 
@@ -40,7 +40,7 @@ instrument.onready(function() {
 }
 ```
 
-## How it works
+## What it does....
 
 Basically it fetches the instruments from https://github.com/gleitz/midi-js-soundfonts using https://rawgit.com, decode them and wrap in a simple buffer player.
 
@@ -143,7 +143,7 @@ And open [http://localhost:8080/example](http://localhost:8080/example)
 
 ## Instruments available
 
-You can grab a json file with all the instruments:
+You can grab a [json file](https://github.com/danigb/soundfont-player/blob/master/instruments.json) with all the instruments:
 
 ```js
 var instrumentNames = require('soundfont-player/instruments.json');
@@ -279,6 +279,10 @@ voice_oohs
 whistle
 woodblock
 xylophone
+
+## Resources
+
+- SoundFont technical specification: http://freepats.zenvoid.org/sf2/sfspec24.pdf
 
 ## License
 
