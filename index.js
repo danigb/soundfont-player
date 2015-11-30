@@ -1,7 +1,7 @@
 'use strict'
 
-var base64DecodeToArray = require('./lib/b64decode.js')
 var parseNote = require('note-parser')
+var decodeBuffer = require('./lib/decode-buffer')
 
 function Soundfont (audioContext) {
   if (!(this instanceof Soundfont)) return new Soundfont(audioContext)
@@ -129,7 +129,7 @@ function createBank (ctx, name, data) {
  */
 function decodeBank (bank) {
   var promises = Object.keys(bank.data).map(function (note) {
-    return decodeNote(bank.ctx, bank.data[note])
+    return decodeBuffer(bank.ctx, bank.data[note])
     .then(function (buffer) {
       note = parseNote(note)
       bank.buffers[note.midi] = buffer
@@ -138,21 +138,6 @@ function decodeBank (bank) {
 
   return Promise.all(promises).then(function () {
     return bank
-  })
-}
-
-/*
- * Given a WAA context and a base64 encoded buffer data returns
- * a Promise that resolves when the buffer is decoded
- */
-function decodeNote (context, data) {
-  return new Promise(function (done, reject) {
-    var decodedData = base64DecodeToArray(data.split(',')[1]).buffer
-    context.decodeAudioData(decodedData, function (buffer) {
-      done(buffer)
-    }, function (e) {
-      reject('DecodeAudioData error', e)
-    })
   })
 }
 
