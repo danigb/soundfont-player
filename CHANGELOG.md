@@ -1,5 +1,9 @@
-[0.6.0]
-- Split functionallity in files
+CHANGELOG
+
+[MASTER]
+- On ready callback now receives the instrument
+- You can pass a midi value to play function
+- Split functionality in files
 
 [0.5.0]
 - Duration no longer required (thanks @benwiley4000).
