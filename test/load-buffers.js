@@ -3,14 +3,14 @@ var vows = require('vows')
 var assert = require('assert')
 var fs = require('fs')
 
-var Soundfont = require('../')
+var loadBank = require('../lib/load-bank')
 
 // Mocks
 var audioContext = {}
 audioContext.decodeAudioData = function (data, callback) { callback(data) }
 
-Soundfont.nameToUrl = function (name) { return './test/support/' + name + '.js' }
-Soundfont.loadData = function (url) {
+function nameToUrl (name) { return './test/support/' + name + '.js' }
+function load (url) {
   var src = fs.readFileSync(url, 'utf8')
   return Promise.resolve(src)
 }
@@ -18,7 +18,7 @@ Soundfont.loadData = function (url) {
 vows.describe('Soundfont.loadBuffers').addBatch({
   'loading a buffer': {
     'topic': function () {
-      Soundfont.loadBuffers(audioContext, 'piano').then(this.callback)
+      loadBank(audioContext, nameToUrl('piano'), load).then(this.callback)
     },
     'load buffers': function (buffers, nothing) {
       assert.deepEqual(buffers, { 21: {}, 22: {}, 23: {}, 24: {}, 25: {} })

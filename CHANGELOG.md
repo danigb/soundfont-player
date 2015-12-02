@@ -1,3 +1,6 @@
+[0.6.0]
+- Split functionallity in files
+
 [0.5.0]
 - Duration no longer required (thanks @benwiley4000).
 

@@ -145,7 +145,7 @@ To run pure javascript examples `npm install -g beefy` then `beefy examples/pian
 
 ## Available instruments
 
-You can grab a [json file](https://github.com/danigb/soundfont-player/blob/master/instruments.json) with all the instruments, or require it:
+You can grab a [json file](https://github.com/danigb/soundfont-player/blob/master/instruments.json) with all the instrument names, or require it:
 
 ```js
 var instrumentNames = require('soundfont-player/instruments.json');
