@@ -1,11 +1,10 @@
-soundfont-player
-================
+# soundfont-player [![npm](https://img.shields.io/npm/v/soundfont-player.svg)](https://www.npmjs.com/package/soundfont-player)
 
-A really simple soundfont loader/player to use MIDI sounds in WebAudio API.
+A soundfont loader/player to use MIDI sounds in WebAudio API.
 The purpose of this project is to reduce as minimum the setup and code required
 to play MIDI sounds.
 
-It is a much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js)
+It is a much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js) soundfont loader (MIDI.js is much bigger, capable of play midi files, for example)
 
 Works out of the box with Benjamin Gleitzman's package of
 [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). Just load the library and play. Try the [demo](http://danigb.github.io/soundfont-player/#demo)
@@ -64,7 +63,7 @@ to generate the note:
 ```js
 var inst = soundfont.instrument('accordion');
 inst.play('c4', 2, 0.2); // => a sine wave sound
-inst.onready(function() {
+inst.onready(function(accordion) {
   inst.play('c4', 2, 0.2); // => a midi accordion sound
 });
 ```
