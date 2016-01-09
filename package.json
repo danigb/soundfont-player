@@ -1,11 +1,11 @@
 {
   "name": "soundfont-player",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Lightweight soundfont (music instrument) loader and player for WebAudio API",
   "main": "lib/index.js",
   "scripts": {
-    "test": "vows test/*.js",
-    "dist": "browserify index.js > dist/soundfont-player.js && uglifyjs dist/soundfont-player.js > dist/soundfont-player.min.js"
+    "test": "mocha",
+    "dist": "browserify lib/index.js > dist/soundfont-player.js && uglifyjs dist/soundfont-player.js > dist/soundfont-player.min.js"
   },
   "repository": {
     "type": "git",
@@ -25,10 +25,9 @@
     "url": "https://github.com/danigb/soundfont-player/issues"
   },
   "dependencies": {
-    "midi.freq": "^1.0.0",
-    "note.midi": "0.0.3"
+    "midi-freq": "^1.0.0",
+    "note-midi": "^1.0.1"
   },
   "devDependencies": {
-    "vows": "0.8.x"
   }
 }

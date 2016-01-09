@@ -1,5 +1,10 @@
 CHANGELOG
 
+[0.6.1]
+- Update dependencies
+- Remove unused code
+- Use mocha instead of vows
+
 [0.6.0]
 - On ready callback now receives the instrument
 - You can pass a midi value to play function

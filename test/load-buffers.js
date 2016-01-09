@@ -1,5 +1,4 @@
-'use strict'
-var vows = require('vows')
+/* global describe it */
 var assert = require('assert')
 var fs = require('fs')
 
@@ -15,13 +14,11 @@ function load (url) {
   return Promise.resolve(src)
 }
 
-vows.describe('Soundfont.loadBuffers').addBatch({
-  'loading a buffer': {
-    'topic': function () {
-      loadBank(audioContext, nameToUrl('piano'), load).then(this.callback)
-    },
-    'load buffers': function (buffers, nothing) {
+describe('Soundfont.loadBuffers', function () {
+  it('load a buffer', function (done) {
+    loadBank(audioContext, nameToUrl('piano'), load).then(function (buffers) {
       assert.deepEqual(buffers, { 21: {}, 22: {}, 23: {}, 24: {}, 25: {} })
-    }
-  }
-}).export(module)
+      done()
+    })
+  })
+})

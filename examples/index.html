@@ -65,8 +65,8 @@
           console.log(inst);
           inst.onready(function() {
             console.log("Instrument " + name + " ready.");
+            btn.removeAttribute("disabled");
           });
-          btn.removeAttribute("disabled");
         });
         label.appendChild(radio);
         label.appendChild(document.createTextNode(instrumentName));

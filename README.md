@@ -122,9 +122,11 @@ Soundfont.nameToUrl= function(instName) { return '/' + instName + '-ogg.js'; }
 ```
 
 
-## Run the example and build the library
+## Run the tests, examples and build the library distribution file
 
-The `dist` folder contains ready to use file for browser. You can build you own with:
+To run the examples you need to install mocha first: `npm i -g mocha` and then: `npm run test`
+
+The `dist` folder contains ready to use file for browser. You can use the dist file from the repo, but if you want to build you own you must install browserify and uglifyjs: `npm i -g browserify uglifyjs` and then:
 
 ```bash
 npm run dist
