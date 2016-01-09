@@ -26,9 +26,12 @@
   },
   "dependencies": {
     "midi.freq": "^1.0.0",
+    "note-parser": "^0.9.0",
     "note.midi": "0.0.3"
   },
   "devDependencies": {
+    "browserify": "^12.0.2",
+    "uglifyjs": "^2.4.10",
     "vows": "0.8.x"
   }
 }
