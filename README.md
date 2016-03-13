@@ -51,10 +51,10 @@ It uses Promises and the Web Audio API.
 
 Create a soundfont object. The soundfont object has two methods:
 
-#### soundfont.instrument(instName)
+#### soundfont.instrument(instName, [options])
 
 Returns an instrument with the given instrument name (take a look to all the names below).
-All the instruments has a play method with the form: `play(noteName, time, duration [, options])`.
+All the instruments has a play method with the form: `play(noteName, time, duration)`.
 
 You can use the `instrument.onready` method to know when the instrument is loaded.
 If you play the instrument before its loaded, a simple sine oscillator is used
@@ -77,6 +77,12 @@ note.stop(1) // stops after 1 second
 
 The instruments are cached, so call `soundfont.instrument` twice with the same
 name only loads the instrument once.
+
+The valid `options` are:
+
+- `gain`: the gain value (by default 2.0)
+- `destination`: the instrument destination (by default the audio context destination)
+
 
 You can pass `null` to get the default sine oscillator instrument:
 
