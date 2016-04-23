@@ -36,7 +36,7 @@ Then get the instrument and play:
 var instrument = soundfont.instrument('acoustic_grand_piano');
 instrument.onready(function() {
   instrument.play('C4', 0);
-}
+})
 ```
 
 ## What it does....

@@ -1,5 +1,8 @@
 CHANGELOG
 
+[0.8.0]
+- Add optional `options` parameter to `play()` that overrides the `defaultOptions` of `instrument()`. Thanks @mattbierner
+
 [0.6.1]
 - Update dependencies
 - Remove unused code
