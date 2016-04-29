@@ -52,7 +52,7 @@ var midi = require('note-midi')
  *
  * @param {AudioContext} ac - the audio context
  * @param {Hash} buffers - a midi number to audio buffer hash map
- * @param {Hash} options - (Optional) a hash of options:
+ * @param {Hash} defaultOptions - (Optional) a hash of options:
  * - gain: the output gain (default: 2)
  * - destination: the destination of the player (default: `ac.destination`)
  */
@@ -75,14 +75,16 @@ module.exports = function (ctx, buffers, defaultOptions) {
     vca.gain.value = gain
     source.connect(vca)
     vca.connect(destination)
-
-    source.start(time)
-    if (duration > 0) source.stop(time + duration)
+    if (duration > 0) {
+      source.start(time, 0, duration)
+    } else {
+      source.start(time)
+    }
     return source
   }
 }
 
-},{"note-midi":11}],3:[function(require,module,exports){
+},{"note-midi":8}],3:[function(require,module,exports){
 'use strict'
 
 var base64DecodeToArray = require('./b64decode.js')
@@ -117,6 +119,7 @@ var buffersPlayer = require('./buffers-player')
  * Create a Soundfont object
  *
  * @param {AudioContext} context - the [audio context](https://developer.mozilla.org/en/docs/Web/API/AudioContext)
+ * @param {Function} nameToUrl - (Optional) a function that maps the sound font name to the url
  * @return {Soundfont} a soundfont object
  */
 function Soundfont (ctx, nameToUrl) {
@@ -240,7 +243,7 @@ function decodeBank (bank) {
   })
 }
 
-},{"./decode-buffer":3,"note-midi":11}],6:[function(require,module,exports){
+},{"./decode-buffer":3,"note-midi":8}],6:[function(require,module,exports){
 'use strict'
 
 var freq = require('midi-freq')(440)
@@ -286,7 +289,7 @@ module.exports = function (ctx, defaultOptions) {
   }
 }
 
-},{"midi-freq":7,"note-midi":11}],7:[function(require,module,exports){
+},{"midi-freq":7,"note-midi":8}],7:[function(require,module,exports){
 /**
  * Get the pitch frequency in herzs (with custom concert tuning) from a midi number
  *
@@ -321,6 +324,44 @@ module.exports = function freq (tuning, midi) {
 },{}],8:[function(require,module,exports){
 'use strict'
 
+var parse = require('music-notation/note/parse')
+
+/**
+ * Get the midi number of a note
+ *
+ * If the argument passed to this function is a valid midi number, it returns it
+ *
+ * The note can be an string in scientific notation or
+ * [array pitch notation](https://github.com/danigb/music.array.notation)
+ *
+ * @name midi
+ * @function
+ * @param {String|Array|Integer} note - the note in string or array notation.
+ * If the parameter is a valid midi number it return it as it.
+ * @return {Integer} the midi number
+ *
+ * @example
+ * var midi = require('note-midi')
+ * midi('A4') // => 69
+ * midi('a3') // => 57
+ * midi([0, 2]) // => 36 (C2 in array notation)
+ * midi(60) // => 60
+ * midi('C') // => null (pitch classes don't have midi number)
+ */
+function midi (note) {
+  if ((typeof note === 'number' || typeof note === 'string') &&
+    note > 0 && note < 128) return +note
+  var p = Array.isArray(note) ? note : parse(note)
+  if (!p || p.length < 2) return null
+  return p[0] * 7 + p[1] * 12 + 12
+}
+
+if (typeof module === 'object' && module.exports) module.exports = midi
+if (typeof window !== 'undefined') window.midi = midi
+
+},{"music-notation/note/parse":10}],9:[function(require,module,exports){
+'use strict'
+
 /**
  * A simple and fast memoization function
  *
@@ -341,7 +382,7 @@ module.exports = function (fn) {
   }
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict'
 
 var memoize = require('../memoize')
@@ -387,7 +428,7 @@ module.exports = memoize(function (str) {
   return [fifths, oct, dur]
 })
 
-},{"../memoize":8,"./regex":10}],10:[function(require,module,exports){
+},{"../memoize":9,"./regex":11}],11:[function(require,module,exports){
 'use strict'
 
 /**
@@ -411,42 +452,4 @@ module.exports = memoize(function (str) {
  */
 module.exports = /^([a-gA-G])(#{1,}|b{1,}|x{1,}|)(-?\d*)(\/\d+|)\s*(.*)\s*$/
 
-},{}],11:[function(require,module,exports){
-'use strict'
-
-var parse = require('music-notation/note/parse')
-
-/**
- * Get the midi number of a note
- *
- * If the argument passed to this function is a valid midi number, it returns it
- *
- * The note can be an string in scientific notation or
- * [array pitch notation](https://github.com/danigb/music.array.notation)
- *
- * @name midi
- * @function
- * @param {String|Array|Integer} note - the note in string or array notation.
- * If the parameter is a valid midi number it return it as it.
- * @return {Integer} the midi number
- *
- * @example
- * var midi = require('note-midi')
- * midi('A4') // => 69
- * midi('a3') // => 57
- * midi([0, 2]) // => 36 (C2 in array notation)
- * midi(60) // => 60
- * midi('C') // => null (pitch classes don't have midi number)
- */
-function midi (note) {
-  if ((typeof note === 'number' || typeof note === 'string') &&
-    note > 0 && note < 128) return +note
-  var p = Array.isArray(note) ? note : parse(note)
-  if (!p || p.length < 2) return null
-  return p[0] * 7 + p[1] * 12 + 12
-}
-
-if (typeof module === 'object' && module.exports) module.exports = midi
-if (typeof window !== 'undefined') window.midi = midi
-
-},{"music-notation/note/parse":9}]},{},[4]);
+},{}]},{},[4]);

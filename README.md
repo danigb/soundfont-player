@@ -39,6 +39,23 @@ instrument.onready(function() {
 })
 ```
 
+#### Note about using the library on iOS
+
+Since iOS don't support ogg audio files, you have tu use a custom nameToUrl function (see [configuration](https://github.com/danigb/soundfont-player#configuration)):
+
+```js
+function nameToUrl(name) {
+  return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-mp3.js';
+}
+
+var soundfont = new Soundfont(ctx, nameToUrl)
+...
+```
+
+#### Note about using this library in production
+
+This library uses `rawgit` to fetch the general midi soundfont banks. If you have a very high traffic site consider move the soundfont banks to your own server/CDN (take a look to [rawgit FAW](https://github.com/rgrove/rawgit/wiki/Frequently-Asked-Questions))
+
 ## What it does....
 
 Basically it fetches the instruments from https://github.com/gleitz/midi-js-soundfonts using https://rawgit.com, decode them and wrap in a simple buffer player.

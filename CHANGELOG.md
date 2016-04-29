@@ -1,5 +1,11 @@
 CHANGELOG
 
+[0.8.1]
+- Use `duration` parameter from AudioBufferSourceNode `start` function instead of `stop`. Thanks @frankbaele
+- Add REAME notes about iOS usage and production usage
+- Fix gh-pages links
+
+
 [0.8.0]
 - Add optional `options` parameter to `play()` that overrides the `defaultOptions` of `instrument()`. Thanks @mattbierner
 
