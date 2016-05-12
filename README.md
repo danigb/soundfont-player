@@ -1,5 +1,7 @@
 # soundfont-player [![npm](https://img.shields.io/npm/v/soundfont-player.svg)](https://www.npmjs.com/package/soundfont-player)
 
+[![Code Climate](https://codeclimate.com/github/danigb/soundfont-player/badges/gpa.svg)](https://codeclimate.com/github/danigb/soundfont-player) [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](https://github.com/feross/standard) [![license](https://img.shields.io/npm/l/soundfont-player.svg)](https://www.npmjs.com/package/soundfont-player)
+
 A soundfont loader/player to use MIDI sounds in WebAudio API.
 The purpose of this project is to reduce as minimum the setup and code required
 to play MIDI sounds.
@@ -20,22 +22,22 @@ Load the library...
 ... or require it using a npm package compatible environment (webpack, browserify):
 
 ```js
-var Soundfont = require('soundfont-player');
+var Soundfont = require('soundfont-player')
 ```
 
 Create a Soundfont object:
 
 ```js
-var ctx = new AudioContext();
-var soundfont = new Soundfont(ctx);
+var ctx = new AudioContext()
+var soundfont = new Soundfont(ctx)
 ```
 
 Then get the instrument and play:
 
 ```js
-var instrument = soundfont.instrument('acoustic_grand_piano');
+var instrument = soundfont.instrument('acoustic_grand_piano')
 instrument.onready(function() {
-  instrument.play('C4', 0);
+  instrument.play('C4', 0)
 })
 ```
 
@@ -45,7 +47,7 @@ Since iOS don't support ogg audio files, you have tu use a custom nameToUrl func
 
 ```js
 function nameToUrl(name) {
-  return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-mp3.js';
+  return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-mp3.js'
 }
 
 var soundfont = new Soundfont(ctx, nameToUrl)
@@ -68,21 +70,28 @@ It uses Promises and the Web Audio API.
 
 Create a soundfont object. The soundfont object has two methods:
 
-#### soundfont.instrument(instName [, defaultOptions])
+#### soundfont.instrument(instName [, options])
 
 Returns an instrument with the given instrument name (take a look to all the names below).
-All the instruments has a play method with the form: `play(noteName, time, duration [, options])`.
 
-You can use the `instrument.onready` method to know when the instrument is loaded.
-If you play the instrument before its loaded, a simple sine oscillator is used
-to generate the note:
+The possible properties for the options object are:
+
+- `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
+- `gain`: the gain of the player (1 by default)
+- `notes`: an array of the notes to decode. It can be an array of strings with note names or an array of numbers with midi note numbers. This is a performance option: since decoding mp3 is a cpu intensive process, you can limit the number of notes you want and reduce the time to load the instrument.
+
+The returned instrument has a play function : `play(noteName, time, duration [, options])`. The options, if present, overrides the options passed to the `instrument` function.
+
+You can use the `instrument.onready` function to know when the instrument is loaded.
+
+If you play the instrument before its loaded, a simple sine oscillator is used to generate the note:
 
 ```js
-var inst = soundfont.instrument('accordion');
-inst.play('c4', 2, 0.2); // => a sine wave sound
-inst.onready(function(accordion) {
-  inst.play('c4', 2, 0.2); // => a midi accordion sound
-});
+var inst = soundfont.instrument('accordion')
+inst.play('c4', 2, 0.2) // => a sine wave sound
+inst.onready(function (accordion) {
+  inst.play('c4', 2, 0.2) // => a midi accordion sound
+})
 ```
 
 If you want to control the note release manually you can pass `-1` as duration and call `stop`:
@@ -92,14 +101,13 @@ note = inst.play('c4', 0, -1)
 note.stop(1) // stops after 1 second
 ```
 
-The instruments are cached, so call `soundfont.instrument` twice with the same
-name only loads the instrument once.
+The instruments are cached, so call `soundfont.instrument` twice with the same name only loads the instrument once.
 
 You can pass `null` to get the default sine oscillator instrument:
 
 ```js
-var inst = soundfont.instrument();
-inst.play('c2', 1, 0.5);
+var inst = soundfont.instrument()
+inst.play('c2', 1, 0.5)
 ```
 
 The valid `options` are:
@@ -114,13 +122,13 @@ Options for `play` override the `defaultOptions` on `instrument`.
 The callback is fired when __all__ the instruments are loaded:
 
 ```js
-var harmonics = soundfont.instrument('guitar_harmonics');
-var sax = soundfont.instrument('soprano_sax');
+var harmonics = soundfont.instrument('guitar_harmonics')
+var sax = soundfont.instrument('soprano_sax')
 soundfont.onready(function() {
-  console.log('Guitar harmonics and Sax ready.');
-  harmonics.play('c3', 1, 1);
-  sax.play('e2', 1, 1);
-});
+  console.log('Guitar harmonics and Sax ready.')
+  harmonics.play('c3', 1, 1)
+  sax.play('e2', 1, 1)
+})
 ```
 
 ### Soundfont.loadBuffers(audioContext, instName)
@@ -131,7 +139,7 @@ audio buffers:
 ```js
 Soundfont.loadBuffers(ctx, 'acoustic_grand_piano').then(function(buffers) {
   buffers[Soundfont.noteToMidi('C4')] // => audio buffer of C4
-});
+})
 ```
 
 ### Soundfont.noteToMidi(noteName)
@@ -148,13 +156,11 @@ Soundfont.nameToUrl= function(instName) { return '/' + instName + '-ogg.js'; }
 
 ## Run the tests, examples and build the library distribution file
 
-To run the examples you need to install mocha first: `npm i -g mocha` and then: `npm run test`
+First clone this repo and install dependencies: `npm i`
 
-The `dist` folder contains ready to use file for browser. You can use the dist file from the repo, but if you want to build you own you must install browserify and uglifyjs: `npm i -g browserify uglifyjs` and then:
+To run tests use npm: `npm test`
 
-```bash
-npm run dist
-```
+The `dist` folder contains ready to use file for browser. You can use the dist file from the repo, but if you want to build you own run: `npm run dist`
 
 To run the html example start a local http server. For example:
 
@@ -173,7 +179,7 @@ To run pure javascript examples `npm install -g beefy` then `beefy examples/pian
 You can grab a [json file](https://github.com/danigb/soundfont-player/blob/master/instruments.json) with all the instrument names, or require it:
 
 ```js
-var instrumentNames = require('soundfont-player/instruments.json');
+var instrumentNames = require('soundfont-player/instruments.json')
 ```
 
 The complete list [is here](https://github.com/danigb/soundfont-player/blob/master/INSTRUMENTS.md)

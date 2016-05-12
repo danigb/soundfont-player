@@ -1,5 +1,9 @@
 CHANGELOG
 
+[0.8.2]
+- Standard JS style support
+- Add `notes` options
+
 [0.8.1]
 - Use `duration` parameter from AudioBufferSourceNode `start` function instead of `stop`. Thanks @frankbaele
 - Add REAME notes about iOS usage and production usage

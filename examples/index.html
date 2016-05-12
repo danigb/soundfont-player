@@ -58,9 +58,9 @@
         radio.setAttribute("type", "radio");
         radio.setAttribute("value", instrumentName);
         radio.addEventListener("change", function(e) {
-          btn.setAttribute("disabled", true);
           var name = e.target.value;
           console.log("Loading " + name + "...");
+          btn.setAttribute("disabled", true);
           inst = soundfont.instrument(name);
           console.log(inst);
           inst.onready(function() {

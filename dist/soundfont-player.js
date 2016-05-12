@@ -1,46 +1,39 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-'use strict';
+'use strict'
 
 function b64ToUint6 (nChr) {
-  return nChr > 64 && nChr < 91 ?
-      nChr - 65
-    : nChr > 96 && nChr < 123 ?
-      nChr - 71
-    : nChr > 47 && nChr < 58 ?
-      nChr + 4
-    : nChr === 43 ?
-      62
-    : nChr === 47 ?
-      63
-    :
-      0;
-
+  return nChr > 64 && nChr < 91 ? nChr - 65
+    : nChr > 96 && nChr < 123 ? nChr - 71
+    : nChr > 47 && nChr < 58 ? nChr + 4
+    : nChr === 43 ? 62
+    : nChr === 47 ? 63
+    : 0
 }
 
 // Decode Base64 to Uint8Array
 // ---------------------------
-function base64DecodeToArray(sBase64, nBlocksSize) {
-  var sB64Enc = sBase64.replace(/[^A-Za-z0-9\+\/]/g, "");
-  var nInLen = sB64Enc.length;
-  var nOutLen = nBlocksSize ?
-    Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize :
-    nInLen * 3 + 1 >> 2;
-  var taBytes = new Uint8Array(nOutLen);
+function base64DecodeToArray (sBase64, nBlocksSize) {
+  var sB64Enc = sBase64.replace(/[^A-Za-z0-9\+\/]/g, '')
+  var nInLen = sB64Enc.length
+  var nOutLen = nBlocksSize
+    ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize
+    : nInLen * 3 + 1 >> 2
+  var taBytes = new Uint8Array(nOutLen)
 
   for (var nMod3, nMod4, nUint24 = 0, nOutIdx = 0, nInIdx = 0; nInIdx < nInLen; nInIdx++) {
-    nMod4 = nInIdx & 3;
-    nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4;
+    nMod4 = nInIdx & 3
+    nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4
     if (nMod4 === 3 || nInLen - nInIdx === 1) {
       for (nMod3 = 0; nMod3 < 3 && nOutIdx < nOutLen; nMod3++, nOutIdx++) {
-        taBytes[nOutIdx] = nUint24 >>> (16 >>> nMod3 & 24) & 255;
+        taBytes[nOutIdx] = nUint24 >>> (16 >>> nMod3 & 24) & 255
       }
-      nUint24 = 0;
+      nUint24 = 0
     }
   }
-  return taBytes;
+  return taBytes
 }
 
-module.exports = base64DecodeToArray;
+module.exports = base64DecodeToArray
 
 },{}],2:[function(require,module,exports){
 'use strict'
@@ -48,25 +41,25 @@ module.exports = base64DecodeToArray;
 var midi = require('note-midi')
 
 /**
- * Create a soundfont buffers player
+ * Create a soundfont bank player
  *
  * @param {AudioContext} ac - the audio context
- * @param {Hash} buffers - a midi number to audio buffer hash map
+ * @param {Hash} bank - a midi number to audio buffer hash map
  * @param {Hash} defaultOptions - (Optional) a hash of options:
  * - gain: the output gain (default: 2)
  * - destination: the destination of the player (default: `ac.destination`)
  */
-module.exports = function (ctx, buffers, defaultOptions) {
+module.exports = function (ctx, bank, defaultOptions) {
   defaultOptions = defaultOptions || {}
   return function (note, time, duration, options) {
     var m = note > 0 && note < 128 ? note : midi(note)
-    var buffer = buffers[m]
+    var buffer = bank[m]
     if (!buffer) return
-    
-    options = options || {}
+
+    options = options || {}
     var gain = options.gain || defaultOptions.gain || 2
     var destination = options.destination || defaultOptions.destination || ctx.destination
-    
+
     var source = ctx.createBufferSource()
     source.buffer = buffer
 
@@ -98,10 +91,10 @@ var base64DecodeToArray = require('./b64decode.js')
  * @api private
  */
 module.exports = function (context, data) {
-  return new Promise(function (done, reject) {
+  return new Promise(function (resolve, reject) {
     var decodedData = base64DecodeToArray(data.split(',')[1]).buffer
     context.decodeAudioData(decodedData, function (buffer) {
-      done(buffer)
+      resolve(buffer)
     }, function (e) {
       reject('DecodeAudioData error', e)
     })
@@ -113,7 +106,7 @@ module.exports = function (context, data) {
 
 var loadBank = require('./load-bank')
 var oscillatorPlayer = require('./oscillator-player')
-var buffersPlayer = require('./buffers-player')
+var bankPlayer = require('./bank-player')
 
 /**
  * Create a Soundfont object
@@ -131,18 +124,24 @@ function Soundfont (ctx, nameToUrl) {
   this.promises = []
 }
 
+Soundfont.prototype.onready = function (callback) {
+  Promise.all(this.promises).then(callback)
+}
+
 Soundfont.prototype.instrument = function (name, options) {
   var ctx = this.ctx
   name = name || 'default'
   if (name in this.instruments) return this.instruments[name]
-  var inst = { name: name, play: oscillatorPlayer(ctx, options) }
+  var inst = {name: name, play: oscillatorPlayer(ctx, options)}
   this.instruments[name] = inst
-  var promise = loadBank(ctx, this.nameToUrl(name)).then(function (buffers) {
-    inst.play = buffersPlayer(ctx, buffers, options)
+  var promise = loadBank(ctx, this.nameToUrl(name), options).then(function (bank) {
+    inst.play = bankPlayer(ctx, bank, options)
     return inst
   })
   this.promises.push(promise)
-  inst.onready = function (cb) { promise.then(cb) }
+  inst.onready = function (cb) {
+    promise.then(cb)
+  }
   return inst
 }
 
@@ -165,7 +164,7 @@ function gleitzUrl (name) {
 if (typeof module === 'object' && module.exports) module.exports = Soundfont
 if (typeof window !== 'undefined') window.Soundfont = Soundfont
 
-},{"./buffers-player":2,"./load-bank":5,"./oscillator-player":6}],5:[function(require,module,exports){
+},{"./bank-player":2,"./load-bank":5,"./oscillator-player":6}],5:[function(require,module,exports){
 'use strict'
 
 var midi = require('note-midi')
@@ -179,25 +178,30 @@ var decodeBuffer = require('./decode-buffer')
  * @param {Function} get - (Optional) given a url return a promise with the contents
  * @param {Function} parse - (Optinal) given a js file return JSON object
  */
-module.exports = function (ctx, url, get, parse) {
-  get = get || getContent
-  parse = parse || parseJavascript
-  return Promise.resolve(url).then(get).then(parse)
+function loadBank (ctx, url, options) {
+  var notes = options ? options.notes : undefined
+  return Promise.resolve(url)
+    .then(loadBank.fetchUrl)
+    .then(loadBank.parseJS)
     .then(function (data) {
-      return { ctx: ctx, data: data, buffers: {} }
+      return {ctx: ctx, data: data, buffers: {}}
     })
-    .then(decodeBank)
-    .then(function (bank) { return bank.buffers })
+    .then(function (data) {
+      return decodeBank(data, notes)
+    })
+    .then(function (bank) {
+      return bank.buffers
+    })
 }
 
-function getContent (url) {
-  return new Promise(function (done, reject) {
+loadBank.fetchUrl = function (url) {
+  return new Promise(function (resolve, reject) {
     var req = new window.XMLHttpRequest()
     req.open('GET', url)
 
     req.onload = function () {
       if (req.status === 200) {
-        done(req.response)
+        resolve(req.response)
       } else {
         reject(Error(req.statusText))
       }
@@ -215,9 +219,8 @@ function getContent (url) {
  *
  * @param {String} data - the SoundFont js file content
  * @return {JSON} the parsed data as JSON object
- * @api private
  */
-function parseJavascript (data) {
+loadBank.parseJS = function (data) {
   var begin = data.indexOf('MIDI.Soundfont.')
   begin = data.indexOf('=', begin) + 2
   var end = data.lastIndexOf(',')
@@ -227,21 +230,38 @@ function parseJavascript (data) {
 /*
  * Decode a bank
  * @param {Object} bank - the bank object
+ * @param {Array} notes - an array of required notes
  * @return {Promise} a promise that resolves to the bank with the buffers decoded
  * @api private
  */
-function decodeBank (bank) {
+
+function decodeBank (bank, notes) {
   var promises = Object.keys(bank.data).map(function (note) {
-    return decodeBuffer(bank.ctx, bank.data[note])
-    .then(function (buffer) {
-      bank.buffers[midi(note)] = buffer
-    })
+    // First check is notes are passed by as param
+    if (typeof notes !== 'undefined') {
+      // convert the notes to midi number
+      var notesMidi = notes.map(midi)
+      // if the current notes is needed for the instrument.
+      if (notesMidi.indexOf(midi(note)) !== -1) {
+        return decodeBuffer(bank.ctx, bank.data[note])
+          .then(function (buffer) {
+            bank.buffers[midi(note)] = buffer
+          })
+      }
+    } else {
+      return decodeBuffer(bank.ctx, bank.data[note])
+        .then(function (buffer) {
+          bank.buffers[midi(note)] = buffer
+        })
+    }
   })
 
   return Promise.all(promises).then(function () {
     return bank
   })
 }
+
+module.exports = loadBank
 
 },{"./decode-buffer":3,"note-midi":8}],6:[function(require,module,exports){
 'use strict'
@@ -255,7 +275,7 @@ var midi = require('note-midi')
  * @param {AudioContext} ac - the audio context
  * @param {Hash} defaultOptions - (Optional) a hash of options:
  * - vcoType: the oscillator type (default: 'sine')
- * - gain: the output gain value (default: 0.2)
+ * - gain: the output gain value (default: 0.4)
   * - destination: the player destination (default: ac.destination)
  */
 module.exports = function (ctx, defaultOptions) {
@@ -265,11 +285,11 @@ module.exports = function (ctx, defaultOptions) {
     if (!f) return
 
     duration = duration || 0.2
-    
+
     options = options || {}
     var destination = options.destination || defaultOptions.destination || ctx.destination
     var vcoType = options.vcoType || defaultOptions.vcoType || 'sine'
-    var gain = options.gain || defaultOptions.gain || 0.2
+    var gain = options.gain || defaultOptions.gain || 0.4
 
     var vco = ctx.createOscillator()
     vco.type = vcoType
