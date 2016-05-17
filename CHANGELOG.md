@@ -1,5 +1,6 @@
 CHANGELOG
-
+[0.8.3]
+- Use Ramp up to value functions for enabling and disabling the gain, when note duration is set.
 [0.8.2]
 - Standard JS style support
 - Add `notes` options
