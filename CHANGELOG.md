@@ -1,4 +1,8 @@
 CHANGELOG
+
+[0.8.4]
+- Use audio-loader
+- Use note-parser instead of note-midi and note-freq
 [0.8.3]
 - Use Ramp up to value functions for enabling and disabling the gain, when note duration is set.
 [0.8.2]
