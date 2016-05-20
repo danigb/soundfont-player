@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "audio-loader": "^0.4.0",
+    "midimessage": "^1.0.5",
     "note-parser": "^1.1.0"
   },
   "devDependencies": {
