@@ -24,74 +24,35 @@ Load the library...
 var Soundfont = require('soundfont-player')
 ```
 
-Create a Soundfont object:
+Create an AudioContext and request an instrument, and play when ready:
 
 ```js
-var ctx = new AudioContext()
-var soundfont = new Soundfont(ctx)
-```
-
-Then get the instrument and play:
-
-```js
-var instrument = soundfont.instrument('acoustic_grand_piano')
-instrument.onready(function() {
-  instrument.play('C4', 0)
+var ac = new AudioContext()
+var instrument = Soundfont.instrument(ac, 'acoustic_grand_piano').then(function (piano) {
+  piano.play('C4')
 })
 ```
 
-#### Note about using the library on iOS
+That's it.
 
-Since iOS don't support ogg audio files, you have tu use a custom nameToUrl function (see [configuration](https://github.com/danigb/soundfont-player#configuration)):
+__Important__: This library uses Promises, so you need a browser capable or a polyfill.
 
-```js
-function nameToUrl(name) {
-  return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-mp3.js'
-}
+__< 0.9.x users__: The API in the 0.9.x releases has been changed and some features are going to be removed (like oscillators). While 0.9.0 adds warnings to the deprecated API, the 1.0.0 will remove the support.
 
-var soundfont = new Soundfont(ctx, nameToUrl)
-...
-```
-
-#### Note about using this library in production
-
-This library uses `rawgit` to fetch the general midi soundfont banks. If you have a very high traffic site consider move the soundfont banks to your own server/CDN (take a look to [rawgit FAW](https://github.com/rgrove/rawgit/wiki/Frequently-Asked-Questions))
-
-## What it does....
-
-Basically it fetches the instruments from https://github.com/gleitz/midi-js-soundfonts using https://rawgit.com, decode them and wrap in a simple buffer player.
-
-It uses Promises and the Web Audio API.
 
 ## API
 
-### Soundfont(audioContext)
+### Soundfont.instrument(audioContext, name, options)
 
-Create a soundfont object. The soundfont object has two methods:
+Request a soundfont instrument, and return a promise that resolves to a soundfont instrument player.
 
-#### soundfont.instrument(instName [, options])
-
-Returns an instrument with the given instrument name (take a look to all the names below).
-
-The possible properties for the options object are:
+The possible values for the options object are:
 
 - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
 - `gain`: the gain of the player (1 by default)
 - `notes`: an array of the notes to decode. It can be an array of strings with note names or an array of numbers with midi note numbers. This is a performance option: since decoding mp3 is a cpu intensive process, you can limit the number of notes you want and reduce the time to load the instrument.
 
 The returned instrument has a play function : `play(noteName, time, duration [, options])`. The options, if present, overrides the options passed to the `instrument` function.
-
-You can use the `instrument.onready` function to know when the instrument is loaded.
-
-If you play the instrument before its loaded, a simple sine oscillator is used to generate the note:
-
-```js
-var inst = soundfont.instrument('accordion')
-inst.play('c4', 2, 0.2) // => a sine wave sound
-inst.onready(function (accordion) {
-  inst.play('c4', 2, 0.2) // => a midi accordion sound
-})
-```
 
 If you want to control the note release manually you can pass `-1` as duration and call `stop`:
 
@@ -100,50 +61,25 @@ note = inst.play('c4', 0, -1)
 note.stop(1) // stops after 1 second
 ```
 
-The instruments are cached, so call `soundfont.instrument` twice with the same name only loads the instrument once.
-
-You can pass `null` to get the default sine oscillator instrument:
-
-```js
-var inst = soundfont.instrument()
-inst.play('c2', 1, 0.5)
-```
-
-The valid `options` are:
-
-- `gain`: the gain value (by default 2.0)
-- `destination`: the instrument destination (by default the audio context destination)
-
-Options for `play` override the `defaultOptions` on `instrument`.
-
-#### soundfont.onready(callback)
-
-The callback is fired when __all__ the instruments are loaded:
-
-```js
-var harmonics = soundfont.instrument('guitar_harmonics')
-var sax = soundfont.instrument('soprano_sax')
-soundfont.onready(function() {
-  console.log('Guitar harmonics and Sax ready.')
-  harmonics.play('c3', 1, 1)
-  sax.play('e2', 1, 1)
-})
-```
-
-### Soundfont.loadBuffers(audioContext, instName)
+### Soundfont.loadBuffers(audioContext, name, options)
 
 Returns a Promise with a buffers object. The buffers object map midi notes to
 audio buffers:
 
 ```js
 Soundfont.loadBuffers(ctx, 'acoustic_grand_piano').then(function(buffers) {
-  buffers[Soundfont.noteToMidi('C4')] // => audio buffer of C4
+  buffers[60] // => An <AudioBuffer> corresponding to note C4
 })
 ```
 
+### Soundfont.nameToUrl(name, format)
+
+Given an instrument name, return a url to the Benjamin Gleitzman's package of
+[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). This is the function used to convert from instrument names to url, but you can pass other function with `options.nameToUrl`
+
 ### Soundfont.noteToMidi(noteName)
 
-Returns the midi name of the note.
+Returns the midi number of a note name.
 
 ## Configuration
 
