@@ -42,52 +42,103 @@ __< 0.9.x users__: The API in the 0.9.x releases has been changed and some featu
 
 ## API
 
-### Soundfont.instrument(audioContext, name, options)
+<a name="instrument"></a>
 
-Request a soundfont instrument, and return a promise that resolves to a soundfont instrument player.
+## instrument(ac, name, options) ⇒ <code>Promise</code>
+Load a soundfont instrument. It returns a promise that resolves to a
+instrument object.
 
-The possible values for the options object are:
+The instrument object returned by the promise has the following properties:
 
-- `nameToUrl`: a function to convert from instrument name to url. By default uses Soundfont.nameToUrl
+- name: the instrument name
+- play: A function to play notes from the buffer with the signature
+`play(note, time, duration, options)`
+
+
+The valid options are:
+
+- `nameToUrl` <Function>: a function to convert from instrument names to URL
 - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
 - `gain`: the gain of the player (1 by default)
-- `notes`: an array of the notes to decode. It can be an array of strings with note names or an array of numbers with midi note numbers. This is a performance option: since decoding mp3 is a cpu intensive process, you can limit the number of notes you want and reduce the time to load the instrument.
+- `notes`: an array of the notes to decode. It can be an array of strings
+with note names or an array of numbers with midi note numbers. This is a
+performance option: since decoding mp3 is a cpu intensive process, you can limit
+limit the number of notes you want and reduce the time to load the instrument.
 
-The returned instrument has a play function : `play(noteName, time, duration [, options])`. The options, if present, overrides the options passed to the `instrument` function.
+**Kind**: global function  
 
-If you want to control the note release manually you can pass `-1` as duration and call `stop`:
+| Param | Type | Description |
+| --- | --- | --- |
+| ac | <code>AudioContext</code> | the audio context |
+| name | <code>String</code> | the instrument name. For example: 'acoustic_grand_piano' |
+| options | <code>Object</code> | (Optional) the same options as Soundfont.loadBuffers |
 
+**Example**  
 ```js
-note = inst.play('c4', 0, -1)
-note.stop(1) // stops after 1 second
-```
-
-### Soundfont.loadBuffers(audioContext, name, options)
-
-Returns a Promise with a buffers object. The buffers object map midi notes to
-audio buffers:
-
-```js
-Soundfont.loadBuffers(ctx, 'acoustic_grand_piano').then(function(buffers) {
-  buffers[60] // => An <AudioBuffer> corresponding to note C4
+var Soundfont = require('sounfont-player')
+Soundfont.instrument('marimba').then(function (marimba) {
+  marimba.play('C4')
 })
 ```
+<a name="loadBuffers"></a>
 
-### Soundfont.nameToUrl(name, format)
+## loadBuffers(ac, name, options) ⇒ <code>Promise</code>
+Load the buffers of a given instrument name. It returns a promise that resolves
+to a hash with midi note numbers as keys, and audio buffers as values.
 
-Given an instrument name, return a url to the Benjamin Gleitzman's package of
-[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). This is the function used to convert from instrument names to url, but you can pass other function with `options.nameToUrl`
+**Kind**: global function  
+**Returns**: <code>Promise</code> - a promise that resolves to a Hash of { midiNoteNum: <AudioBuffer> }
 
-### Soundfont.noteToMidi(noteName)
+The options object accepts the following keys:
 
-Returns the midi number of a note name.
+- nameToUrl {Function}: a function to convert from instrument names to urls.
+By default it uses Benjamin Gleitzman's package of
+[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
+- notes {Array}: the list of note names to be decoded (all by default)  
 
-## Configuration
+| Param | Type | Description |
+| --- | --- | --- |
+| ac | <code>AudioContext</code> | the audio context |
+| name | <code>String</code> | the instrument name (it accepts an url if starts with "http") |
+| options | <code>Object</code> | (Optional) options object |
 
-Overrinding `Soundfont.nameToUrl` you can change the URL associated to a given instrument name:
+**Example**  
 ```js
-Soundfont.nameToUrl= function(instName) { return '/' + instName + '-ogg.js'; }
+var Soundfont = require('soundfont-player')
+Soundfont.loadBuffers(ctx, 'acoustic_grand_piano').then(function(buffers) {
+ buffers[60] // => An <AudioBuffer> corresponding to note C4
+})
 ```
+<a name="nameToUrl"></a>
+
+## nameToUrl(name, format) ⇒ <code>String</code>
+Given an instrument name returns a URL to to the Benjamin Gleitzman's
+package of [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
+
+**Kind**: global function  
+**Returns**: <code>String</code> - the Soundfont file url  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>String</code> | instrument name |
+| format | <code>String</code> | (Optional) Can be 'mp3' or 'ogg' (mp3 by default) |
+
+**Example**  
+```js
+var Soundfont = require('soundfont-player')
+Soundfont.nameToUrl('marimba', 'mp3')
+```
+<a name="noteToMidi"></a>
+
+## noteToMidi(noteName) ⇒ <code>Integer</code>
+Given a note name, return the note midi number
+
+**Kind**: global function  
+**Returns**: <code>Integer</code> - the note midi number or null if not a valid note name  
+
+| Param | Type |
+| --- | --- |
+| noteName | <code>String</code> |
 
 
 ## Run the tests, examples and build the library distribution file

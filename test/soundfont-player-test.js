@@ -24,13 +24,18 @@ describe('Soundfont player', function () {
     it('returns a promise', function () {
       assert.equal(typeof Soundfont.instrument(ac, 'piano').then, 'function')
     })
+    it('loads mp3 by default', function () {
+      return Soundfont.instrument(ac, 'piano').then(function () {
+        assert.equal(load.fetch.url,
+          'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/piano-mp3.js')
+      })
+    })
     it('the promise resolve to an instrument', function () {
       return Soundfont.instrument(ac, 'piano')
       .then(function (piano) {
         assert(piano)
         assert.equal(piano.name, 'piano')
         assert.equal(typeof piano.play, 'function')
-        assert.equal(load.fetch.url, 'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/piano-mp3.js')
       })
     })
     it('options.nameToUrl', function () {

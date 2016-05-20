@@ -6,6 +6,7 @@
   "scripts": {
     "test": "mocha && echo 'ESLINT...' && eslint lib/*.js && echo 'Done.'",
     "dist": "browserify lib/index.js > dist/soundfont-player.js && uglifyjs dist/soundfont-player.js > dist/soundfont-player.min.js",
+    "api": "jsdoc2md lib/index.js > API.md",
     "prepublish": "npm test && npm run dist"
   },
   "repository": {
