@@ -30,6 +30,13 @@ describe('Soundfont player', function () {
         assert(piano)
         assert.equal(piano.name, 'piano')
         assert.equal(typeof piano.play, 'function')
+        assert.equal(load.fetch.url, 'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/piano-mp3.js')
+      })
+    })
+    it('options.nameToUrl', function () {
+      var toUrl = function (name) { return 'URL:' + name + '.js' }
+      return Soundfont.instrument(ac, 'piano', { nameToUrl: toUrl }).then(function (piano) {
+        assert.equal(load.fetch.url, 'URL:piano.js')
       })
     })
   })

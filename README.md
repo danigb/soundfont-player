@@ -48,6 +48,7 @@ Request a soundfont instrument, and return a promise that resolves to a soundfon
 
 The possible values for the options object are:
 
+- `nameToUrl`: a function to convert from instrument name to url. By default uses Soundfont.nameToUrl
 - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
 - `gain`: the gain of the player (1 by default)
 - `notes`: an array of the notes to decode. It can be an array of strings with note names or an array of numbers with midi note numbers. This is a performance option: since decoding mp3 is a cpu intensive process, you can limit the number of notes you want and reduce the time to load the instrument.
