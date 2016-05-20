@@ -14,7 +14,7 @@ var midi = require('note-parser').midi
  */
 module.exports = function player (ctx, name, bank, defaults) {
   defaults = defaults || {}
-  var player = {}
+  var player = { name: name }
   player.play = function (note, time, duration, options) {
     var m = note > 0 && note < 128 ? note : midi(note)
     var buffer = bank[m]
@@ -63,7 +63,6 @@ var player = require('./bank-player')
  * The instrument object returned by the promise has the following properties:
  *
  * - name: the instrument name
- * - url: the source url
  * - play: A function to play notes from the buffer with the signature
  * `play(note, time, duration, options)`
  *
@@ -80,7 +79,8 @@ var player = require('./bank-player')
  */
 function instrument (ac, name, options) {
   return Soundfont.loadBuffers(ac, name, options).then(function (buffers) {
-    return player(ac, name, buffers, options)
+    var p = player(ac, name, buffers, options)
+    return p
   })
 }
 
@@ -108,7 +108,6 @@ function loadBuffers (ac, name, options) {
     : opts.nameToUrl ? opts.nameToUrl
     : gleitzUrl
   var url = nameToUrl(name)
-  console.log('Loading ', url)
   return load(ac, url, { only: opts.only || opts.notes }).then(function (buffers) {
     return Object.keys(buffers).reduce(function (midified, key) {
       midified[note.midi(key)] = buffers[key]
@@ -125,7 +124,7 @@ function loadBuffers (ac, name, options) {
  * @returns {String} the Soundfont file url
  */
 function gleitzUrl (name) {
-  return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-ogg.js'
+  return 'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/' + name + '-mp3.js'
 }
 
 // In the 1.0.0 release it will be var Soundfont = {}
