@@ -8,101 +8,108 @@ var midi = require('note-parser').midi
  *
  * @param {AudioContext} ac - the audio context
  * @param {Hash} bank - a midi number to audio buffer hash map
- * @param {Hash} defaultOptions - (Optional) a hash of options:
+ * @param {Hash} defaults - (Optional) a hash of options:
  * - gain: the output gain (default: 2)
  * - destination: the destination of the player (default: `ac.destination`)
  */
-module.exports = function (ctx, bank, defaultOptions) {
-  defaultOptions = defaultOptions || {}
-  return function (note, time, duration, options) {
+module.exports = function player (ctx, name, bank, defaults) {
+  defaults = defaults || {}
+  var player = {}
+  player.play = function (note, time, duration, options) {
     var m = note > 0 && note < 128 ? note : midi(note)
     var buffer = bank[m]
-    if (!buffer) return
+    if (!buffer) {
+      console.log('Instrument ' + name + ' does NOT conaint note ' + note)
+      return
+    }
 
     options = options || {}
-    var gain = options.gain || defaultOptions.gain || 2
-    var destination = options.destination || defaultOptions.destination || ctx.destination
-
-    var source = ctx.createBufferSource()
-    source.buffer = buffer
-
-    /* VCA */
-    var vca = ctx.createGain()
-    source.connect(vca)
-    vca.connect(destination)
-    vca.gain.linearRampToValueAtTime(gain, ctx.currentTime)
-    if (duration > 0) {
-      source.start(time, 0, duration)
-      vca.gain.exponentialRampToValueAtTime(0.1, ctx.currentTime + duration)
-    } else {
-      source.start(time)
-    }
-    return source
+    var gain = options.gain || defaults.gain || 2
+    var destination = options.destination || defaults.destination || ctx.destination
+    return playBuffer(ctx, destination, buffer, time, duration, gain)
   }
+  return player
 }
 
-},{"note-parser":7}],2:[function(require,module,exports){
+function playBuffer (ctx, destination, buffer, time, duration, gain) {
+  var source = ctx.createBufferSource()
+  source.buffer = buffer
+
+  /* VCA */
+  var vca = ctx.createGain()
+  source.connect(vca)
+  vca.connect(destination)
+  vca.gain.linearRampToValueAtTime(gain, time)
+  if (duration > 0) {
+    source.start(time, 0, duration)
+    vca.gain.exponentialRampToValueAtTime(0.1, time + duration)
+  } else {
+    source.start(time)
+  }
+  return source
+}
+
+},{"note-parser":8}],2:[function(require,module,exports){
 'use strict'
 
 var note = require('note-parser')
 var load = require('audio-loader')
-var oscillatorPlayer = require('./oscillator-player')
-var bankPlayer = require('./bank-player')
+var player = require('./bank-player')
 
 /**
- * Create a Soundfont object
+ * Load a soundfont instrument. It returns a promise that resolves to a
+ * instrument object.
  *
- * @param {AudioContext} context - the [audio context](https://developer.mozilla.org/en/docs/Web/API/AudioContext)
- * @param {Function} nameToUrl - (Optional) a function that maps the sound font name to the url
- * @return {Soundfont} a soundfont object
+ * The instrument object returned by the promise has the following properties:
+ *
+ * - name: the instrument name
+ * - url: the source url
+ * - play: A function to play notes from the buffer with the signature
+ * `play(note, time, duration, options)`
+ *
+ * @param {AudioContext} ac - the audio context
+ * @param {String} name - the instrument name. For example: 'acoustic_grand_piano'
+ * @param {Object} options - (Optional) the same options as Soundfont.loadBuffers
+ * @return {Promise}
+ *
+ * @example
+ * var sf = require('sounfont-player')
+ * sf.instrument('marimba').then(function (marimba) {
+ *   marimba.play('C4')
+ * })
  */
-function Soundfont (ctx, nameToUrl) {
-  if (!(this instanceof Soundfont)) return new Soundfont(ctx)
-
-  this.nameToUrl = nameToUrl || Soundfont.nameToUrl || gleitzUrl
-  this.ctx = ctx
-  this.instruments = {}
-  this.promises = []
-}
-
-Soundfont.prototype.onready = function (callback) {
-  Promise.all(this.promises).then(callback)
-}
-
-Soundfont.prototype.instrument = function (name, options) {
-  var ctx = this.ctx
-  name = name || 'default'
-  if (name in this.instruments) return this.instruments[name]
-  var inst = {name: name, play: oscillatorPlayer(ctx, options)}
-  this.instruments[name] = inst
-  if (name !== 'default') {
-    console.log('Load ', name)
-    var promise = Soundfont.loadBuffers(ctx, name, options).then(function (bank) {
-      inst.play = bankPlayer(ctx, bank, options)
-      return inst
-    })
-    this.promises.push(promise)
-    inst.onready = function (cb) { promise.then(cb) }
-  } else {
-    inst.onready = function (cb) { cb() }
-  }
-  return inst
+function instrument (ac, name, options) {
+  return Soundfont.loadBuffers(ac, name, options).then(function (buffers) {
+    return player(ac, name, buffers, options)
+  })
 }
 
 /**
- * Load the buffers of a given instrument name
+ * Load the buffers of a given instrument name. It returns a promise that resolves
+ * to a hash with midi note numbers as keys, and audio buffers as values.
+ *
  * @param {AudioContext} ac - the audio context
  * @param {String} name - the instrument name (it accepts an url if starts with "http")
  * @param {Object} options - (Optional) options object
- * The options object accepts (all optional):
+ * @return {Promise} a promise that resolves to a Hash of { midiNoteNum: <AudioBuffer> }
  *
- * - notes: the list of note names to be decoded
+ * The options object accepts the following keys:
+ *
+ * - nameToUrl {Function}: a function to convert from instrument names to urls.
+ * By default it uses Benjamin Gleitzman's package of
+ * [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
+ * - notes {Array}: the list of note names to be decoded (all by default)
+ *
+ * @example
  */
-Soundfont.loadBuffers = function (ctx, name, options) {
+function loadBuffers (ac, name, options) {
+  var opts = options || {}
   var nameToUrl = name.startsWith('http') ? function (x) { return x }
-    : Soundfont.nameToUrl || gleitzUrl
-  var opts = options && options.notes ? { only: options.notes } : {}
-  return load(ctx, nameToUrl(name), opts).then(function (buffers) {
+    : opts.nameToUrl ? opts.nameToUrl
+    : gleitzUrl
+  var url = nameToUrl(name)
+  console.log('Loading ', url)
+  return load(ac, url, { only: opts.only || opts.notes }).then(function (buffers) {
     return Object.keys(buffers).reduce(function (midified, key) {
       midified[note.midi(key)] = buffers[key]
       return midified
@@ -120,12 +127,76 @@ Soundfont.loadBuffers = function (ctx, name, options) {
 function gleitzUrl (name) {
   return 'https://cdn.rawgit.com/gleitz/midi-js-Soundfonts/master/FluidR3_GM/' + name + '-ogg.js'
 }
+
+// In the 1.0.0 release it will be var Soundfont = {}
+var Soundfont = require('./legacy')
+Soundfont.instrument = instrument
+Soundfont.loadBuffers = loadBuffers
 Soundfont.nameToUrl = gleitzUrl
+Soundfont.noteToMidi = note.midi
 
 if (typeof module === 'object' && module.exports) module.exports = Soundfont
 if (typeof window !== 'undefined') window.Soundfont = Soundfont
 
-},{"./bank-player":1,"./oscillator-player":3,"audio-loader":6,"note-parser":7}],3:[function(require,module,exports){
+},{"./bank-player":1,"./legacy":3,"audio-loader":7,"note-parser":8}],3:[function(require,module,exports){
+'use strict'
+
+var oscillatorPlayer = require('./oscillator-player')
+
+/**
+ * Create a Soundfont object
+ *
+ * @param {AudioContext} context - the [audio context](https://developer.mozilla.org/en/docs/Web/API/AudioContext)
+ * @param {Function} nameToUrl - (Optional) a function that maps the sound font name to the url
+ * @return {Soundfont} a soundfont object
+ */
+function Soundfont (ctx, nameToUrl) {
+  console.warn('new Soundfont() is deprected')
+  console.log('Please use Soundfont.instrument() instead of new Soundfont().instrument()')
+  if (!(this instanceof Soundfont)) return new Soundfont(ctx)
+
+  this.nameToUrl = nameToUrl || Soundfont.nameToUrl
+  this.ctx = ctx
+  this.instruments = {}
+  this.promises = []
+}
+
+Soundfont.prototype.onready = function (callback) {
+  console.warn('deprecated API')
+  console.log('Please use Promise.all(Soundfont.instrument(), Soundfont.instrument()).then() instead of new Soundfont().onready()')
+  Promise.all(this.promises).then(callback)
+}
+
+Soundfont.prototype.instrument = function (name, options) {
+  console.warn('new Soundfont().instrument() is deprecated.')
+  console.log('Please use Soundfont.instrument() instead.')
+  var ctx = this.ctx
+  name = name || 'default'
+  if (name in this.instruments) return this.instruments[name]
+  var inst = {name: name, play: oscillatorPlayer(ctx, options)}
+  this.instruments[name] = inst
+  if (name !== 'default') {
+    var promise = Soundfont.instrument(ctx, name, options).then(function (instrument) {
+      inst.play = instrument.play
+      return inst
+    })
+    this.promises.push(promise)
+    inst.onready = function (cb) {
+      console.warn('onready is deprecated. Use Soundfont.instrument().then()')
+      promise.then(cb)
+    }
+  } else {
+    inst.onready = function (cb) {
+      console.warn('onready is deprecated. Use Soundfont.instrument().then()')
+      cb()
+    }
+  }
+  return inst
+}
+
+module.exports = Soundfont
+
+},{"./oscillator-player":4}],4:[function(require,module,exports){
 'use strict'
 
 var parser = require('note-parser')
@@ -142,6 +213,8 @@ var parser = require('note-parser')
 module.exports = function (ctx, defaultOptions) {
   defaultOptions = defaultOptions || {}
   return function (note, time, duration, options) {
+    console.warn('The oscillator player is deprecated.')
+    console.log('Starting with version 0.9.0 you will have to wait until the soundfont is loaded to play sounds.')
     var midi = note > 0 && note < 129 ? +note : parser.midi(note)
     var freq = midi ? parser.midiToFreq(midi, 440) : null
     if (!freq) return
@@ -171,7 +244,7 @@ module.exports = function (ctx, defaultOptions) {
   }
 }
 
-},{"note-parser":7}],4:[function(require,module,exports){
+},{"note-parser":8}],5:[function(require,module,exports){
 'use strict'
 
 // DECODE UTILITIES
@@ -209,7 +282,7 @@ function decode (sBase64, nBlocksSize) {
 
 module.exports = { decode: decode }
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /* global XMLHttpRequest */
 'use strict'
 
@@ -235,7 +308,7 @@ module.exports = function (url, type) {
   })
 }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict'
 
 var base64 = require('./base64')
@@ -384,7 +457,7 @@ function midiJsToJson (data) {
 if (typeof module === 'object' && module.exports) module.exports = load
 if (typeof window !== 'undefined') window.loadAudio = load
 
-},{"./base64":4,"./fetch":5}],7:[function(require,module,exports){
+},{"./base64":5,"./fetch":6}],8:[function(require,module,exports){
 'use strict'
 
 var REGEX = /^([a-gA-G])(#{1,}|b{1,}|x{1,}|)(-?\d*)\s*(.*)\s*$/
