@@ -65,8 +65,6 @@ with note names or an array of numbers with midi note numbers. This is a
 performance option: since decoding mp3 is a cpu intensive process, you can limit
 limit the number of notes you want and reduce the time to load the instrument.
 
-**Kind**: global function  
-
 | Param | Type | Description |
 | --- | --- | --- |
 | ac | <code>AudioContext</code> | the audio context |
@@ -80,35 +78,7 @@ Soundfont.instrument('marimba').then(function (marimba) {
   marimba.play('C4')
 })
 ```
-<a name="loadBuffers"></a>
 
-## loadBuffers(ac, name, options) ⇒ <code>Promise</code>
-Load the buffers of a given instrument name. It returns a promise that resolves
-to a hash with midi note numbers as keys, and audio buffers as values.
-
-**Kind**: global function  
-**Returns**: <code>Promise</code> - a promise that resolves to a Hash of { midiNoteNum: <AudioBuffer> }
-
-The options object accepts the following keys:
-
-- nameToUrl {Function}: a function to convert from instrument names to urls.
-By default it uses Benjamin Gleitzman's package of
-[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
-- notes {Array}: the list of note names to be decoded (all by default)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ac | <code>AudioContext</code> | the audio context |
-| name | <code>String</code> | the instrument name (it accepts an url if starts with "http") |
-| options | <code>Object</code> | (Optional) options object |
-
-**Example**  
-```js
-var Soundfont = require('soundfont-player')
-Soundfont.loadBuffers(ctx, 'acoustic_grand_piano').then(function(buffers) {
- buffers[60] // => An <AudioBuffer> corresponding to note C4
-})
-```
 <a name="nameToUrl"></a>
 
 ## nameToUrl(name, format) ⇒ <code>String</code>

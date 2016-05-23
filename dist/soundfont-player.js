@@ -1,60 +1,9 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict'
 
-var midi = require('note-parser').midi
-
-/**
- * Create a soundfont bank player
- *
- * @param {AudioContext} ac - the audio context
- * @param {Hash} bank - a midi number to audio buffer hash map
- * @param {Hash} defaults - (Optional) a hash of options:
- * - gain: the output gain (default: 2)
- * - destination: the destination of the player (default: `ac.destination`)
- */
-module.exports = function player (ctx, name, bank, defaults) {
-  defaults = defaults || {}
-  var player = { name: name }
-  player.play = function (note, time, duration, options) {
-    var m = note > 0 && note < 128 ? note : midi(note)
-    var buffer = bank[m]
-    if (!buffer) {
-      console.log('Instrument ' + name + ' does NOT conaint note ' + note)
-      return
-    }
-
-    options = options || {}
-    var gain = options.gain || defaults.gain || 2
-    var destination = options.destination || defaults.destination || ctx.destination
-    return playBuffer(ctx, destination, buffer, time, duration, gain)
-  }
-  return player
-}
-
-function playBuffer (ctx, destination, buffer, time, duration, gain) {
-  var source = ctx.createBufferSource()
-  source.buffer = buffer
-
-  /* VCA */
-  var vca = ctx.createGain()
-  source.connect(vca)
-  vca.connect(destination)
-  vca.gain.linearRampToValueAtTime(gain, time)
-  if (duration > 0) {
-    source.start(time, 0, duration)
-    vca.gain.exponentialRampToValueAtTime(0.1, time + duration)
-  } else {
-    source.start(time)
-  }
-  return source
-}
-
-},{"note-parser":8}],2:[function(require,module,exports){
-'use strict'
-
 var note = require('note-parser')
 var load = require('audio-loader')
-var player = require('./bank-player')
+var player = require('sample-player')
 
 /**
  * Load a soundfont instrument. It returns a promise that resolves to a
@@ -66,81 +15,87 @@ var player = require('./bank-player')
  * - play: A function to play notes from the buffer with the signature
  * `play(note, time, duration, options)`
  *
+ *
+ * The valid options are:
+ *
+ * - `nameToUrl` <Function>: a function to convert from instrument names to URL
+ * - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
+ * - `gain`: the gain of the player (1 by default)
+ * - `notes`: an array of the notes to decode. It can be an array of strings
+ * with note names or an array of numbers with midi note numbers. This is a
+ * performance option: since decoding mp3 is a cpu intensive process, you can limit
+ * limit the number of notes you want and reduce the time to load the instrument.
+ *
  * @param {AudioContext} ac - the audio context
  * @param {String} name - the instrument name. For example: 'acoustic_grand_piano'
  * @param {Object} options - (Optional) the same options as Soundfont.loadBuffers
  * @return {Promise}
  *
  * @example
- * var sf = require('sounfont-player')
- * sf.instrument('marimba').then(function (marimba) {
+ * var Soundfont = require('sounfont-player')
+ * Soundfont.instrument('marimba').then(function (marimba) {
  *   marimba.play('C4')
  * })
  */
 function instrument (ac, name, options) {
-  return Soundfont.loadBuffers(ac, name, options).then(function (buffers) {
-    var p = player(ac, name, buffers, options)
+  var opts = options || {}
+  var isUrl = opts.isSoundfontURL || isSoundfontURL
+  var url = isUrl(name) ? name
+    : opts.nameToUrl ? opts.nameToUrl(name)
+    : nameToUrl(name)
+
+  return load(ac, url, { only: opts.only || opts.notes }).then(function (buffers) {
+    opts.map = 'midi'
+    var p = player(ac, buffers, opts).connect(ac.destination)
+    p.url = url
+    p.name = name
     return p
   })
 }
 
-/**
- * Load the buffers of a given instrument name. It returns a promise that resolves
- * to a hash with midi note numbers as keys, and audio buffers as values.
- *
- * @param {AudioContext} ac - the audio context
- * @param {String} name - the instrument name (it accepts an url if starts with "http")
- * @param {Object} options - (Optional) options object
- * @return {Promise} a promise that resolves to a Hash of { midiNoteNum: <AudioBuffer> }
- *
- * The options object accepts the following keys:
- *
- * - nameToUrl {Function}: a function to convert from instrument names to urls.
- * By default it uses Benjamin Gleitzman's package of
- * [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
- * - notes {Array}: the list of note names to be decoded (all by default)
- *
- * @example
- */
-function loadBuffers (ac, name, options) {
-  var opts = options || {}
-  var nameToUrl = name.startsWith('http') ? function (x) { return x }
-    : opts.nameToUrl ? opts.nameToUrl
-    : gleitzUrl
-  var url = nameToUrl(name)
-  return load(ac, url, { only: opts.only || opts.notes }).then(function (buffers) {
-    return Object.keys(buffers).reduce(function (midified, key) {
-      midified[note.midi(key)] = buffers[key]
-      return midified
-    }, {})
-  })
+function isSoundfontURL (name) {
+  return /\.js(\?.*)?$/i.test(name)
 }
 
-/*
+/**
  * Given an instrument name returns a URL to to the Benjamin Gleitzman's
  * package of [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
  *
  * @param {String} name - instrument name
+ * @param {String} format - (Optional) Can be 'mp3' or 'ogg' (mp3 by default)
  * @returns {String} the Soundfont file url
+ * @example
+ * var Soundfont = require('soundfont-player')
+ * Soundfont.nameToUrl('marimba', 'mp3')
  */
-function gleitzUrl (name) {
-  return 'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/' + name + '-mp3.js'
+function nameToUrl (name, format) {
+  format = format === 'ogg' ? format : 'mp3'
+  return 'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/' + name + '-' + format + '.js'
 }
 
-// In the 1.0.0 release it will be var Soundfont = {}
+// In the 1.0.0 release it will be:
+// var Soundfont = {}
 var Soundfont = require('./legacy')
 Soundfont.instrument = instrument
-Soundfont.loadBuffers = loadBuffers
-Soundfont.nameToUrl = gleitzUrl
+Soundfont.nameToUrl = nameToUrl
+
+/**
+ * Given a note name, return the note midi number
+ *
+ * @name noteToMidi
+ * @function
+ * @param {String} noteName
+ * @return {Integer} the note midi number or null if not a valid note name
+ */
 Soundfont.noteToMidi = note.midi
 
 if (typeof module === 'object' && module.exports) module.exports = Soundfont
 if (typeof window !== 'undefined') window.Soundfont = Soundfont
 
-},{"./bank-player":1,"./legacy":3,"audio-loader":7,"note-parser":8}],3:[function(require,module,exports){
+},{"./legacy":2,"audio-loader":5,"note-parser":6,"sample-player":7}],2:[function(require,module,exports){
 'use strict'
 
-var oscillatorPlayer = require('./oscillator-player')
+var parser = require('note-parser')
 
 /**
  * Create a Soundfont object
@@ -193,12 +148,36 @@ Soundfont.prototype.instrument = function (name, options) {
   return inst
 }
 
-module.exports = Soundfont
-
-},{"./oscillator-player":4}],4:[function(require,module,exports){
-'use strict'
-
-var parser = require('note-parser')
+/*
+ * Load the buffers of a given instrument name. It returns a promise that resolves
+ * to a hash with midi note numbers as keys, and audio buffers as values.
+ *
+ * @param {AudioContext} ac - the audio context
+ * @param {String} name - the instrument name (it accepts an url if starts with "http")
+ * @param {Object} options - (Optional) options object
+ * @return {Promise} a promise that resolves to a Hash of { midiNoteNum: <AudioBuffer> }
+ *
+ * The options object accepts the following keys:
+ *
+ * - nameToUrl {Function}: a function to convert from instrument names to urls.
+ * By default it uses Benjamin Gleitzman's package of
+ * [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
+ * - notes {Array}: the list of note names to be decoded (all by default)
+ *
+ * @example
+ * var Soundfont = require('soundfont-player')
+ * Soundfont.loadBuffers(ctx, 'acoustic_grand_piano').then(function(buffers) {
+ *  buffers[60] // => An <AudioBuffer> corresponding to note C4
+ * })
+ */
+function loadBuffers (ac, name, options) {
+  console.warn('Soundfont.loadBuffers is deprecate.')
+  console.log('Use Soundfont.instrument(..) and get buffers properties from the result.')
+  return Soundfont.instrument(ac, name, options).then(function (inst) {
+    return inst.buffers
+  })
+}
+Soundfont.loadBuffers = loadBuffers
 
 /**
  * Returns a function that plays an oscillator
@@ -209,7 +188,7 @@ var parser = require('note-parser')
  * - gain: the output gain value (default: 0.4)
   * - destination: the player destination (default: ac.destination)
  */
-module.exports = function (ctx, defaultOptions) {
+function oscillatorPlayer (ctx, defaultOptions) {
   defaultOptions = defaultOptions || {}
   return function (note, time, duration, options) {
     console.warn('The oscillator player is deprecated.')
@@ -243,7 +222,9 @@ module.exports = function (ctx, defaultOptions) {
   }
 }
 
-},{"note-parser":8}],5:[function(require,module,exports){
+module.exports = Soundfont
+
+},{"note-parser":6}],3:[function(require,module,exports){
 'use strict'
 
 // DECODE UTILITIES
@@ -281,7 +262,7 @@ function decode (sBase64, nBlocksSize) {
 
 module.exports = { decode: decode }
 
-},{}],6:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /* global XMLHttpRequest */
 'use strict'
 
@@ -307,7 +288,7 @@ module.exports = function (url, type) {
   })
 }
 
-},{}],7:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict'
 
 var base64 = require('./base64')
@@ -456,7 +437,7 @@ function midiJsToJson (data) {
 if (typeof module === 'object' && module.exports) module.exports = load
 if (typeof window !== 'undefined') window.loadAudio = load
 
-},{"./base64":5,"./fetch":6}],8:[function(require,module,exports){
+},{"./base64":3,"./fetch":4}],6:[function(require,module,exports){
 'use strict'
 
 var REGEX = /^([a-gA-G])(#{1,}|b{1,}|x{1,}|)(-?\d*)\s*(.*)\s*$/
@@ -607,4 +588,411 @@ module.exports = parser
  * parser.freq('A') // => null
  */
 
-},{}]},{},[2]);
+},{}],7:[function(require,module,exports){
+/* global AudioBuffer */
+'use strict'
+
+var note = require('note-parser')
+var ADSR = require('adsr')
+
+var identity = function (x) { return x }
+var toMidi = function (n) { return n >= 0 && n < 129 ? +n : note.midi(n) || n }
+var EMPTY = {}
+var DEFAULTS = {
+  gain: 1,
+  adsr: [0.01, 0.1, 0.9, 0.05],
+  loop: false,
+  cents: 0,
+  loopStart: 0,
+  loopEnd: 0
+}
+
+/**
+ * Create a sample player.
+ *
+ * @param {AudioContext} ac - the audio context
+ * @param {ArrayBuffer|Object<String,ArrayBuffer>} source
+ * @param {Onject} options - (Optional) an options object
+ * @return {player} the player
+ * @example
+ * var SamplePlayer = require('sample-player')
+ * var ac = new AudioContext()
+ * var snare = SamplePlayer(ac, <AudioBuffer>)
+ * snare.play()
+ */
+function SamplePlayer (ac, source, options) {
+  var connected = false
+  var nextId = 0
+  var tracked = {}
+  var out = ac.createGain()
+  out.gain.value = 1
+
+  var opts = Object.assign({}, DEFAULTS, options)
+  var toKey = opts.map === 'midi' ? toMidi
+    : typeof opts.map === 'function' ? opts.map
+    : identity
+
+  /**
+   * The created player
+   * @namespace
+   */
+  var player = { out: out, opts: opts }
+  if (source instanceof AudioBuffer) player.buffer = source
+  else player.buffers = createBuffers(source, toKey)
+
+  /**
+   * Start a sample buffer.
+   *
+   * The returned object has a function `stop(when)` to stop the sound.
+   *
+   * @method
+   * @param {String} name - the name of the buffer. If the source of the
+   * SamplePlayer is one sample buffer, this parameter is not required
+   * @param {Float} when - (Optional) when to start (current time if by default)
+   * @param {Object} options - additional sample playing options
+   * @return {AudioNode} an audio node with a `stop` function
+   * @example
+   * var sample = player(ac, <AudioBuffer>).connect(ac.destination)
+   * sample.start()
+   * sample.start(5, { gain: 0.7 }) // name not required since is only one AudioBuffer
+   * @example
+   * var drums = player(ac, { snare: <AudioBuffer>, kick: <AudioBuffer>, ... }).connect(ac.destination)
+   * drums.start('snare')
+   * drums.start('snare', 0, { gain: 0.3 })
+   */
+  player.start = function (name, when, options) {
+    if (player.buffer && name !== null) return player.play(null, name, when)
+    var key = name ? toKey(name) : null
+    var buffer = key ? player.buffers[key] : player.buffer
+    if (!buffer) {
+      console.warn('Buffer ' + key + ' not found.')
+      return
+    } else if (!connected) {
+      console.warn('SamplePlayer not connected to any node.')
+      return
+    }
+
+    when = when || ac.currentTime
+    var node = createNode(buffer, options || EMPTY)
+    node.key = key
+    node.id = track(node)
+    node.env.start(when)
+    node.source.start(when)
+    fire('start', when, node)
+    return node
+  }
+  /**
+   * An alias for `player.start`
+   * @see player.start
+   * @since 0.3.0
+   */
+  player.play = player.start
+  /**
+   * Stop some or all samples
+   *
+   * @param {Float} when - (Optional) an absolute time in seconds (or currentTime
+   * if not specified)
+   * @param {Array} nodes - (Optional) an array of nodes or nodes ids to stop
+   * @return {Array} an array of ids of the stoped samples
+   *
+   * @example
+   * var longSound = player(ac, <AudioBuffer>).connect(ac.destination)
+   * longSound.start(ac.currentTime)
+   * longSound.start(ac.currentTime + 1)
+   * longSound.start(ac.currentTime + 2)
+   * longSound.stop(ac.currentTime + 3) // stop the three sounds
+   */
+  player.stop = function (when, ids) {
+    var node
+    ids = ids || Object.keys(tracked)
+    return ids.map(function (id) {
+      node = tracked[id]
+      if (!node) return null
+      node.stop(when)
+      return node.id
+    })
+  }
+  /**
+   * Connect the player to a destination node
+   *
+   * @param {AudioNode} destination - the destination node
+   * @return {AudioPlayer} the player
+   * @chainable
+   * @example
+   * var sample = player(ac, <AudioBuffer>).connect(ac.destination)
+   */
+  player.connect = function (dest) {
+    connected = true
+    out.connect(dest)
+    return player
+  }
+  /**
+   * Schedule events to be played
+   *
+   * @param {Object} source - the events source
+   * @param {Function} map - (Optional) a function to map the events source into
+   * events object.
+   * @param {Float} when - (Optional) an absolute time to start (or currentTime
+   * if not present)
+   * @return {Array} an array of ids
+   * @example
+   * var drums = player(ac, ...).connect(ac.destination)
+   * drums.schedule([
+   *   { name: 'kick', time: 0 },
+   *   { name: 'snare', time: 0.5 },
+   *   { name: 'kick', time: 1 },
+   *   { name: 'snare', time: 1.5 }
+   * ])
+   */
+  player.schedule = function (source, fn, when) {
+    var events = toEvents(source).map(fn || identity).filter(identity)
+    var time = !when || when < ac.currentTime ? ac.currentTime : when
+    fire('shedule', time, events)
+    events.forEach(function (event) {
+      player.play(event.name || null, time + event.time, event)
+    })
+  }
+  return player
+
+  function track (node) {
+    node.id = nextId++
+    tracked[node.id] = node
+    node.source.onended = function () {
+      var now = ac.currentTime
+      node.source.disconnect()
+      node.env.disconnect()
+      node.disconnect()
+      fire('ended', now, node)
+    }
+    return node.id
+  }
+
+  function fire (event, when, obj) {
+    if (player.onevent) player.onevent(event, when, obj)
+    var fn = player['on' + event]
+    if (!fn) return
+    else if (obj.key) fn(when, obj.key, obj)
+    else fn(when, obj)
+  }
+
+  function createNode (buffer, options) {
+    var node = ac.createGain()
+    node.gain.value = 0 // the envelope will control the gain
+    node.connect(out)
+
+    node.env = envelope(ac, options.adsr || opts.adsr)
+    node.env.value.value = options.gain || opts.gain
+    node.env.connect(node.gain)
+
+    node.source = ac.createBufferSource()
+    node.source.buffer = buffer
+    node.source.connect(node)
+    node.source.loop = options.loop || opts.loop
+    node.source.playbackRate.value = centsToRate(options.cents || opts.cents)
+    node.source.loopStart = options.loopStart || opts.loopStart
+    node.source.loopEnd = options.loopEnd || opts.loopEnd
+    node.stop = function (when) {
+      var time = when || ac.currentTime
+      var stopAt = node.env.stop(time)
+      fire('stop', time, node)
+      node.source.stop(stopAt)
+    }
+    return node
+  }
+}
+
+function createBuffers (source, toKey) {
+  return Object.keys(source).reduce(function (buffers, name) {
+    buffers[toKey(name)] = source[name]
+    return buffers
+  }, {})
+}
+
+// create an adsr envelop from array of [a, d, s, r]
+function envelope (ac, adsr) {
+  var env = ADSR(ac)
+  env.attack = adsr[0]; env.decay = adsr[1]
+  env.sustain = adsr[2]; env.release = adsr[3]
+  return env
+}
+
+/*
+ * Get playback rate for a given pitch change (in cents)
+ * Basic [math](http://www.birdsoft.demon.co.uk/music/samplert.htm):
+ * f2 = f1 * 2^( C / 1200 )
+ */
+function centsToRate (cents) { return cents ? Math.pow(2, cents / 1200) : 1 }
+
+function toEvents (source) {
+  return Array.isArray(source) ? source
+    : typeof source === 'number' ? repeat(Math.abs(source) + 1)
+    : [ source ]
+}
+function repeat (n) { for (var a = []; n--; a[n] = n); return a }
+
+if (typeof module === 'object' && module.exports) module.exports = SamplePlayer
+if (typeof window !== 'undefined') window.SamplePlayer = SamplePlayer
+
+},{"adsr":8,"note-parser":6}],8:[function(require,module,exports){
+module.exports = ADSR
+
+function ADSR(audioContext){
+  var node = audioContext.createGain()
+
+  var voltage = node._voltage = getVoltage(audioContext)
+  var value = scale(voltage)
+  var startValue = scale(voltage)
+  var endValue = scale(voltage)
+
+  node._startAmount = scale(startValue)
+  node._endAmount = scale(endValue)
+
+  node._multiplier = scale(value)
+  node._multiplier.connect(node)
+  node._startAmount.connect(node)
+  node._endAmount.connect(node)
+
+  node.value = value.gain
+  node.startValue = startValue.gain
+  node.endValue = endValue.gain
+
+  node.startValue.value = 0
+  node.endValue.value = 0
+
+  Object.defineProperties(node, props)
+  return node
+}
+
+var props = {
+
+  attack: { value: 0, writable: true },
+  decay: { value: 0, writable: true },
+  sustain: { value: 1, writable: true },
+  release: {value: 0, writable: true },
+
+  getReleaseDuration: {
+    value: function(){
+      return this.release
+    }
+  },
+
+  start: {
+    value: function(at){
+      var target = this._multiplier.gain
+      var startAmount = this._startAmount.gain
+      var endAmount = this._endAmount.gain
+
+      this._voltage.start(at)
+      this._decayFrom = this._decayFrom = at+this.attack
+      this._startedAt = at
+
+      var sustain = this.sustain
+
+      target.cancelScheduledValues(at)
+      startAmount.cancelScheduledValues(at)
+      endAmount.cancelScheduledValues(at)
+
+      endAmount.setValueAtTime(0, at)
+
+      if (this.attack){
+        target.setValueAtTime(0, at)
+        target.linearRampToValueAtTime(1, at + this.attack)
+
+        startAmount.setValueAtTime(1, at)
+        startAmount.linearRampToValueAtTime(0, at + this.attack)
+      } else {
+        target.setValueAtTime(1, at)
+        startAmount.setValueAtTime(0, at)
+      }
+
+      if (this.decay){
+        target.setTargetAtTime(sustain, this._decayFrom, getTimeConstant(this.decay))
+      }
+    }
+  },
+
+  stop: {
+    value: function(at, isTarget){
+      if (isTarget){
+        at = at - this.release
+      }
+
+      var endTime = at + this.release
+      if (this.release){
+
+        var target = this._multiplier.gain
+        var startAmount = this._startAmount.gain
+        var endAmount = this._endAmount.gain
+
+        target.cancelScheduledValues(at)
+        startAmount.cancelScheduledValues(at)
+        endAmount.cancelScheduledValues(at)
+
+        var expFalloff = getTimeConstant(this.release)
+
+        // truncate attack (required as linearRamp is removed by cancelScheduledValues)
+        if (this.attack && at < this._decayFrom){
+          var valueAtTime = getValue(0, 1, this._startedAt, this._decayFrom, at)
+          target.linearRampToValueAtTime(valueAtTime, at)
+          startAmount.linearRampToValueAtTime(1-valueAtTime, at)
+          startAmount.setTargetAtTime(0, at, expFalloff)
+        }
+
+        endAmount.setTargetAtTime(1, at, expFalloff)
+        target.setTargetAtTime(0, at, expFalloff)
+      }
+
+      this._voltage.stop(endTime)
+      return endTime
+    }
+  },
+
+  onended: {
+    get: function(){
+      return this._voltage.onended
+    },
+    set: function(value){
+      this._voltage.onended = value
+    }
+  }
+
+}
+
+var flat = new Float32Array([1,1])
+function getVoltage(context){
+  var voltage = context.createBufferSource()
+  var buffer = context.createBuffer(1, 2, context.sampleRate)
+  buffer.getChannelData(0).set(flat)
+  voltage.buffer = buffer
+  voltage.loop = true
+  return voltage
+}
+
+function scale(node){
+  var gain = node.context.createGain()
+  node.connect(gain)
+  return gain
+}
+
+function getTimeConstant(time){
+  return Math.log(time+1)/Math.log(100)
+}
+
+function getValue(start, end, fromTime, toTime, at){
+  var difference = end - start
+  var time = toTime - fromTime
+  var truncateTime = at - fromTime
+  var phase = truncateTime / time
+  var value = start + phase * difference
+
+  if (value <= start) {
+      value = start
+  }
+  if (value >= end) {
+      value = end
+  }
+
+  return value
+}
+
+},{}]},{},[1]);
