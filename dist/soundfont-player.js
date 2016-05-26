@@ -45,7 +45,6 @@ function instrument (ac, name, options) {
     : nameToUrl(name)
 
   return load(ac, url, { only: opts.only || opts.notes }).then(function (buffers) {
-    opts.map = 'midi'
     var p = player(ac, buffers, opts).connect(ac.destination)
     p.url = url
     p.name = name
@@ -92,7 +91,7 @@ Soundfont.noteToMidi = note.midi
 if (typeof module === 'object' && module.exports) module.exports = Soundfont
 if (typeof window !== 'undefined') window.Soundfont = Soundfont
 
-},{"./legacy":2,"audio-loader":5,"note-parser":6,"sample-player":7}],2:[function(require,module,exports){
+},{"./legacy":2,"audio-loader":5,"note-parser":6,"sample-player":8}],2:[function(require,module,exports){
 'use strict'
 
 var parser = require('note-parser')
@@ -589,14 +588,135 @@ module.exports = parser
  */
 
 },{}],7:[function(require,module,exports){
-/* global AudioBuffer */
+
+module.exports = function (player) {
+  /**
+   * Adds a listener of an event
+   * @chainable
+   * @param {String} event - the event name
+   * @param {Function} callback - the event handler
+   * @return {SamplePlayer} the player
+   * @example
+   * player.on('start', function(time, note) {
+   *   console.log(time, note)
+   * })
+   */
+  player.on = function (event, cb) {
+    var prop = 'on' + event
+    var old = player[prop]
+    player[prop] = old ? chain(old, cb) : cb
+    return player
+  }
+  return player
+}
+
+function chain (fn1, fn2) {
+  return function (a, b, c, d) { fn1(a, b, c, d); fn2(a, b, c, d) }
+}
+
+},{}],8:[function(require,module,exports){
+'use strict'
+
+var player = require('./player')
+var events = require('./events')
+var mapper = require('./mapper')
+var scheduler = require('./scheduler')
+var midi = require('./midi')
+
+function SamplePlayer (ac, source, options) {
+  return midi(scheduler(mapper(events(player(ac, source, options)))))
+}
+
+if (typeof module === 'object' && module.exports) module.exports = SamplePlayer
+if (typeof window !== 'undefined') window.SamplePlayer = SamplePlayer
+
+},{"./events":7,"./mapper":9,"./midi":10,"./player":11,"./scheduler":12}],9:[function(require,module,exports){
 'use strict'
 
 var note = require('note-parser')
+var toMidi = function (n) { return n >= 0 && n < 129 ? +n : note.midi(n) }
+
+// Adds note name to midi conversion
+module.exports = function (player) {
+  var map = player.opts.map
+  var toKey = typeof map === 'function' ? map : toMidi
+  player.mapName = function (name) {
+    return name ? toKey(name) || name : null
+  }
+  if (player.buffers) {
+    var start = player.start
+    player.buffers = mapBuffers(player.buffers, player.mapName)
+    player.start = function (name, when, options) {
+      return start(player.mapName(name), when, options)
+    }
+  }
+  return player
+}
+
+function mapBuffers (buffers, toKey) {
+  return Object.keys(buffers).reduce(function (mapped, name) {
+    mapped[toKey(name)] = buffers[name]
+    return mapped
+  }, {})
+}
+
+},{"note-parser":6}],10:[function(require,module,exports){
+var midimessage = require('midimessage')
+
+module.exports = function (player) {
+  /**
+  * Connect a player to a midi input
+  *
+  * The options accepts:
+  *
+  * - channel: the channel to listen to. Listen to all channels by default.
+  *
+  * @param {MIDIInput} input
+  * @param {Object} options - (Optional)
+  * @return {SamplePlayer} the player
+  * @example
+  * var piano = player(...)
+  * window.navigator.requestMIDIAccess().then(function (midiAccess) {
+  *   midiAccess.inputs.forEach(function (midiInput) {
+  *     piano.listenToMidi(midiInput)
+  *   })
+  * })
+  */
+  player.listenToMidi = function (input, options) {
+    var started = {}
+    var opts = options || {}
+    var gain = opts.gain || function (vel) { return vel / 127 }
+
+    input.onmidimessage = function (msg) {
+      var mm = msg.messageType ? msg : midimessage(msg)
+      if (mm.messageType === 'noteon' && mm.velocity === 0) {
+        mm.messageType = 'noteoff'
+      }
+      if (opts.channel && mm.channel !== opts.channel) return
+
+      switch (mm.messageType) {
+        case 'noteon':
+          started[mm.key] = player.play(mm.key, 0, { gain: gain(mm.velocity) })
+          break
+        case 'noteoff':
+          if (started[mm.key]) {
+            started[mm.key].stop()
+            delete started[mm.key]
+          }
+          break
+      }
+    }
+    return player
+  }
+  return player
+}
+
+},{"midimessage":14}],11:[function(require,module,exports){
+/* global AudioBuffer */
+'use strict'
+
 var ADSR = require('adsr')
 
-var identity = function (x) { return x }
-var toMidi = function (n) { return n >= 0 && n < 129 ? +n : note.midi(n) || n }
 var EMPTY = {}
 var DEFAULTS = {
   gain: 1,
@@ -628,24 +748,19 @@ function SamplePlayer (ac, source, options) {
   out.gain.value = 1
 
   var opts = Object.assign({}, DEFAULTS, options)
-  var toKey = opts.map === 'midi' ? toMidi
-    : typeof opts.map === 'function' ? opts.map
-    : identity
 
   /**
-   * The created player
    * @namespace
    */
-  var player = { out: out, opts: opts }
+  var player = { ac: ac, out: out, opts: opts }
   if (source instanceof AudioBuffer) player.buffer = source
-  else player.buffers = createBuffers(source, toKey)
+  else player.buffers = source
 
   /**
    * Start a sample buffer.
    *
    * The returned object has a function `stop(when)` to stop the sound.
    *
-   * @method
    * @param {String} name - the name of the buffer. If the source of the
    * SamplePlayer is one sample buffer, this parameter is not required
    * @param {Float} when - (Optional) when to start (current time if by default)
@@ -661,11 +776,10 @@ function SamplePlayer (ac, source, options) {
    * drums.start('snare', 0, { gain: 0.3 })
    */
   player.start = function (name, when, options) {
-    if (player.buffer && name !== null) return player.play(null, name, when)
-    var key = name ? toKey(name) : null
-    var buffer = key ? player.buffers[key] : player.buffer
+    if (player.buffer && name !== null) return player.start(null, name, when)
+    var buffer = name ? player.buffers[name] : player.buffer
     if (!buffer) {
-      console.warn('Buffer ' + key + ' not found.')
+      console.warn('Buffer ' + name + ' not found.')
       return
     } else if (!connected) {
       console.warn('SamplePlayer not connected to any node.')
@@ -673,12 +787,11 @@ function SamplePlayer (ac, source, options) {
     }
 
     when = when || ac.currentTime
-    var node = createNode(buffer, options || EMPTY)
-    node.key = key
-    node.id = track(node)
+    var node = createNode(name, buffer, options || EMPTY)
+    node.id = track(name, node)
     node.env.start(when)
     node.source.start(when)
-    fire('start', when, node)
+    player.emit('start', when, name)
     return node
   }
   /**
@@ -686,7 +799,8 @@ function SamplePlayer (ac, source, options) {
    * @see player.start
    * @since 0.3.0
    */
-  player.play = player.start
+  player.play = function (n, w, o) { player.start(n, w, o) }
+
   /**
    * Stop some or all samples
    *
@@ -726,35 +840,18 @@ function SamplePlayer (ac, source, options) {
     out.connect(dest)
     return player
   }
-  /**
-   * Schedule events to be played
-   *
-   * @param {Object} source - the events source
-   * @param {Function} map - (Optional) a function to map the events source into
-   * events object.
-   * @param {Float} when - (Optional) an absolute time to start (or currentTime
-   * if not present)
-   * @return {Array} an array of ids
-   * @example
-   * var drums = player(ac, ...).connect(ac.destination)
-   * drums.schedule([
-   *   { name: 'kick', time: 0 },
-   *   { name: 'snare', time: 0.5 },
-   *   { name: 'kick', time: 1 },
-   *   { name: 'snare', time: 1.5 }
-   * ])
-   */
-  player.schedule = function (source, fn, when) {
-    var events = toEvents(source).map(fn || identity).filter(identity)
-    var time = !when || when < ac.currentTime ? ac.currentTime : when
-    fire('shedule', time, events)
-    events.forEach(function (event) {
-      player.play(event.name || null, time + event.time, event)
-    })
+
+  player.emit = function (event, when, obj) {
+    if (player.onevent) player.onevent(event, when, obj)
+    var fn = player['on' + event]
+    if (fn) fn(when, obj)
   }
+
   return player
 
-  function track (node) {
+  // =============== PRIVATE FUNCTIONS ============== //
+
+  function track (name, node) {
     node.id = nextId++
     tracked[node.id] = node
     node.source.onended = function () {
@@ -762,20 +859,12 @@ function SamplePlayer (ac, source, options) {
       node.source.disconnect()
       node.env.disconnect()
       node.disconnect()
-      fire('ended', now, node)
+      player.emit('ended', now, name)
     }
     return node.id
   }
 
-  function fire (event, when, obj) {
-    if (player.onevent) player.onevent(event, when, obj)
-    var fn = player['on' + event]
-    if (!fn) return
-    else if (obj.key) fn(when, obj.key, obj)
-    else fn(when, obj)
-  }
-
-  function createNode (buffer, options) {
+  function createNode (name, buffer, options) {
     var node = ac.createGain()
     node.gain.value = 0 // the envelope will control the gain
     node.connect(out)
@@ -794,18 +883,11 @@ function SamplePlayer (ac, source, options) {
     node.stop = function (when) {
       var time = when || ac.currentTime
       var stopAt = node.env.stop(time)
-      fire('stop', time, node)
+      player.emit('stop', time, name)
       node.source.stop(stopAt)
     }
     return node
   }
-}
-
-function createBuffers (source, toKey) {
-  return Object.keys(source).reduce(function (buffers, name) {
-    buffers[toKey(name)] = source[name]
-    return buffers
-  }, {})
 }
 
 // create an adsr envelop from array of [a, d, s, r]
@@ -823,6 +905,45 @@ function envelope (ac, adsr) {
  */
 function centsToRate (cents) { return cents ? Math.pow(2, cents / 1200) : 1 }
 
+module.exports = SamplePlayer
+
+},{"adsr":13}],12:[function(require,module,exports){
+'use strict'
+
+var identity = function (x) { return x }
+
+module.exports = function (player) {
+  /**
+   * Play a list of events
+   *
+   * @param {Object} source - the events source
+   * @param {Function} map - (Optional) a function to map the events source into
+   * events object.
+   * @param {Float} when - (Optional) an absolute time to start (or currentTime
+   * if not present)
+   * @return {Array} an array of ids
+   * @example
+   * var drums = player(ac, ...).connect(ac.destination)
+   * drums.schedule([
+   *   { name: 'kick', time: 0 },
+   *   { name: 'snare', time: 0.5 },
+   *   { name: 'kick', time: 1 },
+   *   { name: 'snare', time: 1.5 }
+   * ])
+   */
+  player.schedule = function (source, fn, when) {
+    var now = player.ac.currentTime
+    var time = !when || when < now ? now : when
+    var events = toEvents(source).map(fn || identity).filter(identity)
+    player.emit('schedule', time, events)
+    events.forEach(function (event) {
+      var key = event.name || event.key || event.note || event.midi || null
+      if (key) player.start(key, time + (event.time || 0), event)
+    })
+  }
+  return player
+}
+
 function toEvents (source) {
   return Array.isArray(source) ? source
     : typeof source === 'number' ? repeat(Math.abs(source) + 1)
@@ -830,10 +951,7 @@ function toEvents (source) {
 }
 function repeat (n) { for (var a = []; n--; a[n] = n); return a }
 
-if (typeof module === 'object' && module.exports) module.exports = SamplePlayer
-if (typeof window !== 'undefined') window.SamplePlayer = SamplePlayer
-
-},{"adsr":8,"note-parser":6}],8:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 module.exports = ADSR
 
 function ADSR(audioContext){
@@ -995,4 +1113,9 @@ function getValue(start, end, fromTime, toTime, at){
   return value
 }
 
+},{}],14:[function(require,module,exports){
+(function (global){
+(function(e){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=e()}else if(typeof define==="function"&&define.amd){define([],e)}else{var t;if(typeof window!=="undefined"){t=window}else if(typeof global!=="undefined"){t=global}else if(typeof self!=="undefined"){t=self}else{t=this}t.midimessage=e()}})(function(){var e,t,s;return function o(e,t,s){function a(n,i){if(!t[n]){if(!e[n]){var l=typeof require=="function"&&require;if(!i&&l)return l(n,!0);if(r)return r(n,!0);var h=new Error("Cannot find module '"+n+"'");throw h.code="MODULE_NOT_FOUND",h}var c=t[n]={exports:{}};e[n][0].call(c.exports,function(t){var s=e[n][1][t];return a(s?s:t)},c,c.exports,o,e,t,s)}return t[n].exports}var r=typeof require=="function"&&require;for(var n=0;n<s.length;n++)a(s[n]);return a}({1:[function(e,t,s){"use strict";Object.defineProperty(s,"__esModule",{value:true});s["default"]=function(e){function t(e){this._event=e;this._data=e.data;this.receivedTime=e.receivedTime;if(this._data&&this._data.length<2){console.warn("Illegal MIDI message of length",this._data.length);return}this._messageCode=e.data[0]&240;this.channel=e.data[0]&15;switch(this._messageCode){case 128:this.messageType="noteoff";this.key=e.data[1]&127;this.velocity=e.data[2]&127;break;case 144:this.messageType="noteon";this.key=e.data[1]&127;this.velocity=e.data[2]&127;break;case 160:this.messageType="keypressure";this.key=e.data[1]&127;this.pressure=e.data[2]&127;break;case 176:this.messageType="controlchange";this.controllerNumber=e.data[1]&127;this.controllerValue=e.data[2]&127;if(this.controllerNumber===120&&this.controllerValue===0){this.channelModeMessage="allsoundoff"}else if(this.controllerNumber===121){this.channelModeMessage="resetallcontrollers"}else if(this.controllerNumber===122){if(this.controllerValue===0){this.channelModeMessage="localcontroloff"}else{this.channelModeMessage="localcontrolon"}}else if(this.controllerNumber===123&&this.controllerValue===0){this.channelModeMessage="allnotesoff"}else if(this.controllerNumber===124&&this.controllerValue===0){this.channelModeMessage="omnimodeoff"}else if(this.controllerNumber===125&&this.controllerValue===0){this.channelModeMessage="omnimodeon"}else if(this.controllerNumber===126){this.channelModeMessage="monomodeon"}else if(this.controllerNumber===127){this.channelModeMessage="polymodeon"}break;case 192:this.messageType="programchange";this.program=e.data[1];break;case 208:this.messageType="channelpressure";this.pressure=e.data[1]&127;break;case 224:this.messageType="pitchbendchange";var t=e.data[2]&127;var s=e.data[1]&127;this.pitchBend=(t<<8)+s;break}}return new t(e)};t.exports=s["default"]},{}]},{},[1])(1)});
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}]},{},[1]);
