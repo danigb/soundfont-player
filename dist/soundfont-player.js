@@ -720,7 +720,7 @@ var ADSR = require('adsr')
 var EMPTY = {}
 var DEFAULTS = {
   gain: 1,
-  adsr: [0.01, 0.1, 0.9, 0.05],
+  adsr: [0.01, 0.1, 0.9, 0.3],
   loop: false,
   cents: 0,
   loopStart: 0,
@@ -786,12 +786,14 @@ function SamplePlayer (ac, source, options) {
       return
     }
 
+    var opts = options || EMPTY
     when = when || ac.currentTime
-    var node = createNode(name, buffer, options || EMPTY)
+    var node = createNode(name, buffer, opts)
     node.id = track(name, node)
     node.env.start(when)
     node.source.start(when)
     player.emit('start', when, name)
+    if (opts.duration) node.stop(when + opts.duration)
     return node
   }
   /**
