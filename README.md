@@ -12,7 +12,7 @@ Works out of the box with Benjamin Gleitzman's package of
 
 ## Usage
 
-Load the library...
+[Download the distribution file](https://raw.githubusercontent.com/danigb/soundfont-player/master/dist/soundfont-player.min.js) and include it in your html...
 
 ```html
 <script src="soundfont-player.js"></script>
