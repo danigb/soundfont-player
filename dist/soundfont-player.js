@@ -602,6 +602,7 @@ module.exports = function (player) {
    * })
    */
   player.on = function (event, cb) {
+    if (arguments.length === 1 && typeof event === 'function') return player.on('event', event)
     var prop = 'on' + event
     var old = player[prop]
     player[prop] = old ? chain(old, cb) : cb
@@ -619,48 +620,18 @@ function chain (fn1, fn2) {
 
 var player = require('./player')
 var events = require('./events')
-var mapper = require('./mapper')
+var notes = require('./notes')
 var scheduler = require('./scheduler')
 var midi = require('./midi')
 
 function SamplePlayer (ac, source, options) {
-  return midi(scheduler(mapper(events(player(ac, source, options)))))
+  return midi(scheduler(notes(events(player(ac, source, options)))))
 }
 
 if (typeof module === 'object' && module.exports) module.exports = SamplePlayer
 if (typeof window !== 'undefined') window.SamplePlayer = SamplePlayer
 
-},{"./events":7,"./mapper":9,"./midi":10,"./player":11,"./scheduler":12}],9:[function(require,module,exports){
-'use strict'
-
-var note = require('note-parser')
-var toMidi = function (n) { return n >= 0 && n < 129 ? +n : note.midi(n) }
-
-// Adds note name to midi conversion
-module.exports = function (player) {
-  var map = player.opts.map
-  var toKey = typeof map === 'function' ? map : toMidi
-  player.mapName = function (name) {
-    return name ? toKey(name) || name : null
-  }
-  if (player.buffers) {
-    var start = player.start
-    player.buffers = mapBuffers(player.buffers, player.mapName)
-    player.start = function (name, when, options) {
-      return start(player.mapName(name), when, options)
-    }
-  }
-  return player
-}
-
-function mapBuffers (buffers, toKey) {
-  return Object.keys(buffers).reduce(function (mapped, name) {
-    mapped[toKey(name)] = buffers[name]
-    return mapped
-  }, {})
-}
-
-},{"note-parser":6}],10:[function(require,module,exports){
+},{"./events":7,"./midi":9,"./notes":10,"./player":11,"./scheduler":12}],9:[function(require,module,exports){
 var midimessage = require('midimessage')
 
 module.exports = function (player) {
@@ -711,7 +682,45 @@ module.exports = function (player) {
   return player
 }
 
-},{"midimessage":14}],11:[function(require,module,exports){
+},{"midimessage":14}],10:[function(require,module,exports){
+'use strict'
+
+var note = require('note-parser')
+var isMidi = function (n) { return n !== null && n !== [] && n >= 0 && n < 129 }
+var toMidi = function (n) { return isMidi(n) ? +n : note.midi(n) }
+
+// Adds note name to midi conversion
+module.exports = function (player) {
+  if (player.buffers) {
+    var map = player.opts.map
+    var toKey = typeof map === 'function' ? map : toMidi
+    var mapper = function (name) {
+      return name ? toKey(name) || name : null
+    }
+
+    player.buffers = mapBuffers(player.buffers, mapper)
+    var start = player.start
+    player.start = function (name, when, options) {
+      var key = mapper(name)
+      var dec = key % 1
+      if (dec) {
+        key = Math.floor(key)
+        options = Object.assign(options || {}, { cents: Math.floor(dec * 100) })
+      }
+      return start(key, when, options)
+    }
+  }
+  return player
+}
+
+function mapBuffers (buffers, toKey) {
+  return Object.keys(buffers).reduce(function (mapped, name) {
+    mapped[toKey(name)] = buffers[name]
+    return mapped
+  }, {})
+}
+
+},{"note-parser":6}],11:[function(require,module,exports){
 /* global AudioBuffer */
 'use strict'
 
@@ -776,7 +785,9 @@ function SamplePlayer (ac, source, options) {
    * drums.start('snare', 0, { gain: 0.3 })
    */
   player.start = function (name, when, options) {
+    // if only one buffer, reorder arguments
     if (player.buffer && name !== null) return player.start(null, name, when)
+
     var buffer = name ? player.buffers[name] : player.buffer
     if (!buffer) {
       console.warn('Buffer ' + name + ' not found.')
@@ -788,11 +799,11 @@ function SamplePlayer (ac, source, options) {
 
     var opts = options || EMPTY
     when = when || ac.currentTime
+    player.emit('start', when, name, opts)
     var node = createNode(name, buffer, opts)
     node.id = track(name, node)
     node.env.start(when)
     node.source.start(when)
-    player.emit('start', when, name)
     if (opts.duration) node.stop(when + opts.duration)
     return node
   }
@@ -843,10 +854,10 @@ function SamplePlayer (ac, source, options) {
     return player
   }
 
-  player.emit = function (event, when, obj) {
-    if (player.onevent) player.onevent(event, when, obj)
+  player.emit = function (event, when, obj, opts) {
+    if (player.onevent) player.onevent(event, when, obj, opts)
     var fn = player['on' + event]
-    if (fn) fn(when, obj)
+    if (fn) fn(when, obj, opts)
   }
 
   return player
@@ -884,8 +895,8 @@ function SamplePlayer (ac, source, options) {
     node.source.loopEnd = options.loopEnd || opts.loopEnd
     node.stop = function (when) {
       var time = when || ac.currentTime
-      var stopAt = node.env.stop(time)
       player.emit('stop', time, name)
+      var stopAt = node.env.stop(time)
       node.source.stop(stopAt)
     }
     return node
@@ -912,46 +923,66 @@ module.exports = SamplePlayer
 },{"adsr":13}],12:[function(require,module,exports){
 'use strict'
 
-var identity = function (x) { return x }
+var isArr = Array.isArray
+var isObj = function (o) { return o && typeof o === 'object' }
+var OPTS = {}
 
 module.exports = function (player) {
   /**
-   * Play a list of events
+   * Schedule a list of events to be played at specific time.
    *
-   * @param {Object} source - the events source
-   * @param {Function} map - (Optional) a function to map the events source into
-   * events object.
-   * @param {Float} when - (Optional) an absolute time to start (or currentTime
-   * if not present)
+   * It supports three formats of events for the events list:
+   *
+   * - An array with [time, note]
+   * - An array with [time, object]
+   * - An object with { time: ?, [name|note|midi|key]: ? }
+   *
+   * @param {Float} time - an absolute time to start (or AudioContext's
+   * currentTime if provided number is 0)
+   * @param {Array} events - the events list.
    * @return {Array} an array of ids
+   *
    * @example
+   * // Event format: [time, note]
+   * var piano = player(ac, ...).connect(ac.destination)
+   * piano.schedule(0, [ [0, 'C2'], [0.5, 'C3'], [1, 'C4'] ])
+   *
+   * @example
+   * // Event format: an object { time: ?, name: ? }
    * var drums = player(ac, ...).connect(ac.destination)
-   * drums.schedule([
+   * drums.schedule(0, [
    *   { name: 'kick', time: 0 },
    *   { name: 'snare', time: 0.5 },
    *   { name: 'kick', time: 1 },
    *   { name: 'snare', time: 1.5 }
    * ])
    */
-  player.schedule = function (source, fn, when) {
+  player.schedule = function (time, events) {
     var now = player.ac.currentTime
-    var time = !when || when < now ? now : when
-    var events = toEvents(source).map(fn || identity).filter(identity)
-    player.emit('schedule', time, events)
-    events.forEach(function (event) {
-      var key = event.name || event.key || event.note || event.midi || null
-      if (key) player.start(key, time + (event.time || 0), event)
+    var when = time < now ? now : time
+    player.emit('schedule', when, events)
+    var t, o, note, opts
+    return events.map(function (event) {
+      if (!event) return null
+      else if (isArr(event)) {
+        t = event[0]; o = event[1]
+      } else {
+        t = event.time; o = event
+      }
+
+      if (isObj(o)) {
+        note = o.name || o.key || o.note || o.midi || null
+        opts = o
+      } else {
+        note = o
+        opts = OPTS
+      }
+
+      return player.start(note, when + (t || 0), opts)
     })
   }
   return player
 }
-
-function toEvents (source) {
-  return Array.isArray(source) ? source
-    : typeof source === 'number' ? repeat(Math.abs(source) + 1)
-    : [ source ]
-}
-function repeat (n) { for (var a = []; n--; a[n] = n); return a }
 
 },{}],13:[function(require,module,exports){
 module.exports = ADSR

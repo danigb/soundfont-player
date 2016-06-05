@@ -2,13 +2,26 @@
 
 [![Build Status](https://travis-ci.org/danigb/soundfont-player.svg?branch=master)](https://travis-ci.org/danigb/soundfont-player) [![Code Climate](https://codeclimate.com/github/danigb/soundfont-player/badges/gpa.svg)](https://codeclimate.com/github/danigb/soundfont-player) [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](https://github.com/feross/standard) [![license](https://img.shields.io/npm/l/soundfont-player.svg)](https://www.npmjs.com/package/soundfont-player)
 
-A soundfont loader/player to use MIDI sounds in WebAudio API.
-The purpose of this library is be able to play MIDI soundfonts with little client code and no server setup.
+A soundfont loader/player to play MIDI sounds using WebAudio API.
 
-It is a much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js) soundfont loader (MIDI.js is much bigger, capable of play midi files, for example)
+It loads Benjamin Gleitzman's package of
+[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts) by default with no server setup. Just a few lines of javascript:
 
-Works out of the box with Benjamin Gleitzman's package of
-[pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts). Just load the library and play. Try the [demo](http://danigb.github.io/soundfont-player/#demo)
+```js
+Soundfont.instrument(new AudioContext(), 'acoustic_grand_piano').then(function (piano) {
+  piano.play('C4')
+})
+```
+
+It is a much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js) soundfont loader (MIDI.js is much bigger, capable of play midi files, for example, but it weights an order of magnitude more).
+
+## Features
+
+- Load soundfont files in MIDI.js format or json format.
+- Unlimited poliphony (and stop all sounds with a single function call)
+- Use midi note numbers. Accepts decimal points to detune.
+- Easily connect to a Web MIDI API `MidiInput`
+- Schedule a list of notes
 
 ## Usage
 
@@ -28,19 +41,15 @@ Create an AudioContext and request an instrument, and play when ready:
 
 ```js
 var ac = new AudioContext()
-var instrument = Soundfont.instrument(ac, 'acoustic_grand_piano').then(function (piano) {
-  piano.play('C4')
+Soundfont.instrument(ac, 'marimba').then(function (marimba) {
+  marimba.play('C4')
 })
 ```
 
-That's it.
-
-__Important__: This library uses Promises, so you need a browser capable or a polyfill.
+## API
 
 __< 0.9.x users__: The API in the 0.9.x releases has been changed and some features are going to be removed (like oscillators). While 0.9.0 adds warnings to the deprecated API, the 1.0.0 will remove the support.
 
-
-## API
 
 <a name="instrument"></a>
 
@@ -59,7 +68,9 @@ The valid options are:
 
 - `nameToUrl` <Function>: a function to convert from instrument names to URL
 - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
-- `gain`: the gain of the player (1 by default)
+- `gain`: the gain (volume) of the player (1 by default)
+- `adsr`: the amplitude envelope as array of `[attack, decay, sustain, release]`
+- `loop`: set to true to loop audio buffers
 - `notes`: an array of the notes to decode. It can be an array of strings
 with note names or an array of numbers with midi note numbers. This is a
 performance option: since decoding mp3 is a cpu intensive process, you can limit
@@ -79,8 +90,42 @@ Soundfont.instrument('marimba').then(function (marimba) {
 })
 ```
 
-<a name="nameToUrl"></a>
+<a name="player"></a>
+### The player
 
+The player object returned by the promise has the following functions:
+
+<a name="player.start"></a>
+#### player.play
+An alias for `player.start`
+
+<a name="player.start"></a>
+#### player.start(name, when, options) ⇒ <code>AudioNode</code>
+Start a sample buffer. The returned object has a function `stop(when)` to stop the sound.
+
+<a name="player.stop"></a>
+#### player.stop(when, nodes) ⇒ <code>Array</code>
+Stop some or all samples
+
+<a name="player.on"></a>
+#### player.on(event, callback) ⇒ <code>[player](#player)</code>
+Adds a listener of an event
+
+<a name="player.connect"></a>
+#### player.connect(destination) ⇒ <code>AudioPlayer</code>
+Connect the player to a destination node
+
+<a name="player.schedule"></a>
+#### player.schedule(when, events) ⇒ <code>Array</code>
+Schedule a list of events to be played at specific time.
+
+<a name="player.listenToMidi"></a>
+#### player.listenToMidi(input, options) ⇒ <code>[player](#player)</code>
+Connect a player to a midi input
+
+See [sample-player](https://github.com/danigb/sample-player) for more information.
+
+<a name="nameToUrl"></a>
 ## nameToUrl(name, format) ⇒ <code>String</code>
 Given an instrument name returns a URL to to the Benjamin Gleitzman's
 package of [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
@@ -98,18 +143,6 @@ package of [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfon
 var Soundfont = require('soundfont-player')
 Soundfont.nameToUrl('marimba', 'mp3')
 ```
-<a name="noteToMidi"></a>
-
-## noteToMidi(noteName) ⇒ <code>Integer</code>
-Given a note name, return the note midi number
-
-**Kind**: global function  
-**Returns**: <code>Integer</code> - the note midi number or null if not a valid note name  
-
-| Param | Type |
-| --- | --- |
-| noteName | <code>String</code> |
-
 
 ## Run the tests, examples and build the library distribution file
 
