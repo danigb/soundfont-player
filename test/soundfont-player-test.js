@@ -43,4 +43,18 @@ describe('Soundfont player', function () {
       })
     })
   })
+  describe('Build urls', function () {
+    it('get default url', function () {
+      assert.equal(Soundfont.nameToUrl('marimba'),
+        'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/marimba-mp3.js')
+    })
+    it('get MusyngKite url', function () {
+      assert.equal(Soundfont.nameToUrl('marimba', 'MusyngKite'),
+        'http://gleitz.github.io/midi-js-soundfonts/MusyngKite/marimba-mp3.js')
+    })
+    it('accepts ogg', function () {
+      assert.equal(Soundfont.nameToUrl('marimba', null, 'ogg'),
+        'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/marimba-ogg.js')
+    })
+  })
 })

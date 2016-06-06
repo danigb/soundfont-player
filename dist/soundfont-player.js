@@ -61,15 +61,18 @@ function isSoundfontURL (name) {
  * package of [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
  *
  * @param {String} name - instrument name
+ * @param {String} soundfont - (Optional) the soundfont name. One of 'FluidR3_GM'
+ * or 'MusyngKite' ('FluidR3_GM' by default)
  * @param {String} format - (Optional) Can be 'mp3' or 'ogg' (mp3 by default)
  * @returns {String} the Soundfont file url
  * @example
  * var Soundfont = require('soundfont-player')
  * Soundfont.nameToUrl('marimba', 'mp3')
  */
-function nameToUrl (name, format) {
+function nameToUrl (name, sf, format) {
   format = format === 'ogg' ? format : 'mp3'
-  return 'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/' + name + '-' + format + '.js'
+  sf = sf === 'MusyngKite' ? sf : 'FluidR3_GM'
+  return 'http://gleitz.github.io/midi-js-soundfonts/' + sf + '/' + name + '-' + format + '.js'
 }
 
 // In the 1.0.0 release it will be:

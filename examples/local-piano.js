@@ -7,7 +7,7 @@ document.body.innerHTML = '<h1>Local piano</h1>' +
  '<p>If you can\'t hear the piano, open the development console</p>'
 
 function localUrl (name) {
-  return 'examples/' + name + '-ogg.js'
+  return 'examples/assets/' + name + '-ogg.js'
 }
 sf.instrument(ac, 'acoustic_grand_piano', {
   nameToUrl: localUrl,

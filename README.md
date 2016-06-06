@@ -23,6 +23,8 @@ It is a much simpler and lightweight replacement for [MIDI.js](https://github.co
 - Easily connect to a Web MIDI API `MidiInput`
 - Schedule a list of notes
 
+It uses [audio-loader](https://github.com/danigb/audio-loader) to load soundfont files and [sample-player](https://github.com/danigb/sample-player) to play the sounds.
+
 ## Usage
 
 [Download the distribution file](https://raw.githubusercontent.com/danigb/soundfont-player/master/dist/soundfont-player.min.js) and include it in your html...
@@ -63,10 +65,11 @@ The instrument object returned by the promise has the following properties:
 - play: A function to play notes from the buffer with the signature
 `play(note, time, duration, options)`
 
-
 The valid options are:
 
-- `nameToUrl` <Function>: a function to convert from instrument names to URL
+- `format`: can be 'mp3' or 'ogg'
+- `soundfont`: can be 'FluidR3_GM' or 'MusyngKite'
+- `nameToUrl`: a function to convert from instrument names to URL
 - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
 - `gain`: the gain (volume) of the player (1 by default)
 - `adsr`: the amplitude envelope as array of `[attack, decay, sustain, release]`
@@ -85,7 +88,8 @@ limit the number of notes you want and reduce the time to load the instrument.
 **Example**  
 ```js
 var Soundfont = require('sounfont-player')
-Soundfont.instrument('marimba').then(function (marimba) {
+var ac = new AudioContext()
+Soundfont.instrument(ac, 'marimba', { soundfont: 'MusyngKite' }).then(function (marimba) {
   marimba.play('C4')
 })
 ```
@@ -126,22 +130,22 @@ Connect a player to a midi input
 See [sample-player](https://github.com/danigb/sample-player) for more information.
 
 <a name="nameToUrl"></a>
-## nameToUrl(name, format) ⇒ <code>String</code>
+## nameToUrl(name, soundfont, format) ⇒ <code>String</code>
 Given an instrument name returns a URL to to the Benjamin Gleitzman's
 package of [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfonts)
 
-**Kind**: global function  
 **Returns**: <code>String</code> - the Soundfont file url  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | name | <code>String</code> | instrument name |
+| soundfont | <code>String</code> | (Optional) 'FluidR3_GM' or 'MusyngKite' ('FluidR3_GM' by default) |
 | format | <code>String</code> | (Optional) Can be 'mp3' or 'ogg' (mp3 by default) |
 
 **Example**  
 ```js
 var Soundfont = require('soundfont-player')
-Soundfont.nameToUrl('marimba', 'mp3')
+Soundfont.nameToUrl('marimba', null, 'ogg') // => http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/marimba-ogg.js
 ```
 
 ## Run the tests, examples and build the library distribution file
@@ -166,13 +170,16 @@ To run pure javascript examples `npm install -g beefy` then `beefy examples/pian
 
 ## Available instruments
 
-You can grab a [json file](https://github.com/danigb/soundfont-player/blob/master/instruments.json) with all the instrument names, or require it:
+Download the json files:
+  - [FluidR3_GM]()
+  - [MusyngKite]()
+
+Or require it:
 
 ```js
-var instrumentNames = require('soundfont-player/instruments.json')
+var fluidNames = require('soundfont-player/names/fuildR3.json')
+var musyngNames = require('soundfont-player/names/musyngkite.json')
 ```
-
-The complete list [is here](https://github.com/danigb/soundfont-player/blob/master/INSTRUMENTS.md)
 
 ## Resources
 

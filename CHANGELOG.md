@@ -1,10 +1,16 @@
 CHANGELOG
 
+[0.10.0]
+- Add support to MusyngKite soundfonts.
+- `instrument` can be partially applied with an AudioContext instance
+- Deprecate noteToMidi
+
+[0.9.2] Update sample-player
+[0.9.1] Use sample-player
 [0.9.0]
 - Load soundfonts directly from github.io (https://github.com/gleitz/midi-js-soundfonts/issues/9)
 - New API
 - Deprecate old API
-
 [0.8.4]
 - Use audio-loader
 - Use note-parser instead of note-midi and note-freq
