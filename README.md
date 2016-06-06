@@ -25,26 +25,62 @@ It is a much simpler and lightweight replacement for [MIDI.js](https://github.co
 
 It uses [audio-loader](https://github.com/danigb/audio-loader) to load soundfont files and [sample-player](https://github.com/danigb/sample-player) to play the sounds.
 
-## Usage
+## Install
 
-[Download the distribution file](https://raw.githubusercontent.com/danigb/soundfont-player/master/dist/soundfont-player.min.js) and include it in your html...
+Via npm: `npm install --save soundfont-player`
+
+Or download the [minified code](https://raw.githubusercontent.com/danigb/soundfont-player/master/dist/soundfont-player.min.js) and include it in your html:
 
 ```html
 <script src="soundfont-player.js"></script>
+<script>
+  Soundfont.instrument(new AudioContext(), 'marimba').then(function (marimba) {
+  })
+</script>
 ```
 
-... or require it using a npm package compatible environment (webpack, browserify):
+## Usage
+
+__The soundfont loader__
+
+Out of the box are two Soundfont available: MusyngKite and FluidR3_GM (the first has more quality, but it weights more). You can load them with `instrument` function:
 
 ```js
-var Soundfont = require('soundfont-player')
+Soundfont.instrument(ac, 'clavinet', { soundfont: 'MusyngKite' }).then(function (clavinet) {
+  clavinet.play('C4')
+})
 ```
 
-Create an AudioContext and request an instrument, and play when ready:
+__The soundfont player__
+
+Once you have an instrument you can:
 
 ```js
-var ac = new AudioContext()
-Soundfont.instrument(ac, 'marimba').then(function (marimba) {
-  marimba.play('C4')
+// The first step is always create an instrument:
+Soundfont.instrument(ac, 'clavinet').then(function (clavinet) {
+  // Then you can play a note using names or midi numbers:
+  clavinet.play('C4')
+  clavinet.play(69)
+  // float point midi numbers are accepted (and notes are detuned):
+  clavinet.play(60.5) // => 500 cents over C4
+
+  // you can stop all playing notes
+  clavinet.stop()
+  // or stop only one
+  clavinet.play('C4').stop(ac.currentTime + 0.5)
+  // or pass a duration argument to `play`
+  clavinet.play('C4', ac.currentTime, 0.5)
+
+
+  // You can connect the instrument to a midi input:
+  window.navigator.requestMIDIAccess().then(function (midiAccess) {
+    midiAccess.inputs.forEach(function (midiInput) {
+      clavinet.listenToMidi(midiInput)
+    })
+  })
+
+  // Or schedule events at a given time
+  clavinet.schedule(ac.currentTime + 5, [ { time: 0, note: 60}, { time: 0.5, note: 61}, ...])
 })
 ```
 
@@ -170,11 +206,11 @@ To run pure javascript examples `npm install -g beefy` then `beefy examples/pian
 
 ## Available instruments
 
-Download the json files:
-  - [FluidR3_GM]()
-  - [MusyngKite]()
+Get the json files:
+  - [FluidR3_GM](https://raw.githubusercontent.com/danigb/soundfont-player/master/names/fluidR3.json)
+  - [MusyngKite](https://raw.githubusercontent.com/danigb/soundfont-player/master/names/musyngkite.json)
 
-Or require it:
+Or require them:
 
 ```js
 var fluidNames = require('soundfont-player/names/fuildR3.json')
