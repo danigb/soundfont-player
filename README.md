@@ -43,10 +43,14 @@ Or download the [minified code](https://raw.githubusercontent.com/danigb/soundfo
 
 __The soundfont loader__
 
-Out of the box are two Soundfont available: MusyngKite and FluidR3_GM (the first has more quality, but it weights more). You can load them with `instrument` function:
+Out of the box are two Soundfont available: MusyngKite and FluidR3_GM (MusyngKite is loeaded by default: has more quality, but also weights more). You can load them with `instrument` function:
 
 ```js
-Soundfont.instrument(ac, 'clavinet', { soundfont: 'MusyngKite' }).then(function (clavinet) {
+Soundfont.instrument(ac, 'clavinet').then(function (clavinet) {
+  clavinet.play('C4')
+})
+// or use FluidR3_GM
+Soundfont.instrument(ac, 'clavinet', { soundfont: 'FluidR3_GM' }).then(function (clavinet) {
   clavinet.play('C4')
 })
 ```
