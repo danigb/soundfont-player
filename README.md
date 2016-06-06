@@ -51,6 +51,14 @@ Soundfont.instrument(ac, 'clavinet', { soundfont: 'MusyngKite' }).then(function 
 })
 ```
 
+You can load your own Soundfont files passing the .js path or url:
+
+```js
+Soundfont.instrument(ac, '/soundfonts/clavinet-mp3.js').then(...)
+// or
+Soundfont.instrument(ac, 'clavinet-mp3.js', { from: 'server.com/soundfonts/' })
+```
+
 __The soundfont player__
 
 Once you have an instrument you can:

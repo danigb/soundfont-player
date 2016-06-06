@@ -6,7 +6,7 @@ var path = require('path')
 var load = require('audio-loader')
 var Soundfont = require('..')
 
-var piano = fs.readFileSync(path.join(__dirname, '../examples/soundfonts/acoustic_grand_piano-ogg.js'))
+var piano = fs.readFileSync(path.join(__dirname, '../examples/assets/acoustic_grand_piano-ogg.js'))
 
 load.fetch = function (url) {
   load.fetch.url = url
