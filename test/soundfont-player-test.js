@@ -23,7 +23,7 @@ describe('Soundfont player', function () {
       var ac = new AudioContext()
       return Soundfont.instrument(ac, 'piano').then(function (piano) {
         assert.equal(piano.url,
-          'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/piano-mp3.js')
+          'http://gleitz.github.io/midi-js-soundfonts/MusyngKite/piano-mp3.js')
       })
     })
     it('the promise resolve to an instrument', function () {
@@ -46,15 +46,15 @@ describe('Soundfont player', function () {
   describe('Build urls', function () {
     it('get default url', function () {
       assert.equal(Soundfont.nameToUrl('marimba'),
-        'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/marimba-mp3.js')
+        'http://gleitz.github.io/midi-js-soundfonts/MusyngKite/marimba-mp3.js')
     })
     it('get MusyngKite url', function () {
-      assert.equal(Soundfont.nameToUrl('marimba', 'MusyngKite'),
-        'http://gleitz.github.io/midi-js-soundfonts/MusyngKite/marimba-mp3.js')
+      assert.equal(Soundfont.nameToUrl('marimba', 'FluidR3_GM'),
+        'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/marimba-mp3.js')
     })
     it('accepts ogg', function () {
       assert.equal(Soundfont.nameToUrl('marimba', null, 'ogg'),
-        'http://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/marimba-ogg.js')
+        'http://gleitz.github.io/midi-js-soundfonts/MusyngKite/marimba-ogg.js')
     })
   })
 })

@@ -2,3 +2,4 @@ node_modules
 tmp
 dist/example.js
 API.md
+npm-debug.log
