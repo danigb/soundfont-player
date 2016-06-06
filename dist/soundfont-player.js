@@ -1,7 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict'
 
-var note = require('note-parser')
 var load = require('audio-loader')
 var player = require('sample-player')
 
@@ -18,6 +17,8 @@ var player = require('sample-player')
  *
  * The valid options are:
  *
+ * - `format`: the soundfont format. 'mp3' by default. Can be 'ogg'
+ * - `soundfont`: the soundfont name. 'FluidR3_GM' by default. Can be 'MusyngKite'
  * - `nameToUrl` <Function>: a function to convert from instrument names to URL
  * - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
  * - `gain`: the gain of the player (1 by default)
@@ -38,11 +39,11 @@ var player = require('sample-player')
  * })
  */
 function instrument (ac, name, options) {
+  if (arguments.length === 1) return function (n, o) { return instrument(ac, n, o) }
   var opts = options || {}
   var isUrl = opts.isSoundfontURL || isSoundfontURL
-  var url = isUrl(name) ? name
-    : opts.nameToUrl ? opts.nameToUrl(name)
-    : nameToUrl(name)
+  var toUrl = opts.nameToUrl || nameToUrl
+  var url = isUrl(name) ? name : toUrl(name, opts.soundfont, opts.format)
 
   return load(ac, url, { only: opts.only || opts.notes }).then(function (buffers) {
     var p = player(ac, buffers, opts).connect(ac.destination)
@@ -62,7 +63,7 @@ function isSoundfontURL (name) {
  *
  * @param {String} name - instrument name
  * @param {String} soundfont - (Optional) the soundfont name. One of 'FluidR3_GM'
- * or 'MusyngKite' ('FluidR3_GM' by default)
+ * or 'MusyngKite' ('MusyngKite' by default)
  * @param {String} format - (Optional) Can be 'mp3' or 'ogg' (mp3 by default)
  * @returns {String} the Soundfont file url
  * @example
@@ -71,7 +72,7 @@ function isSoundfontURL (name) {
  */
 function nameToUrl (name, sf, format) {
   format = format === 'ogg' ? format : 'mp3'
-  sf = sf === 'MusyngKite' ? sf : 'FluidR3_GM'
+  sf = sf === 'FluidR3_GM' ? sf : 'MusyngKite'
   return 'http://gleitz.github.io/midi-js-soundfonts/' + sf + '/' + name + '-' + format + '.js'
 }
 
@@ -81,20 +82,10 @@ var Soundfont = require('./legacy')
 Soundfont.instrument = instrument
 Soundfont.nameToUrl = nameToUrl
 
-/**
- * Given a note name, return the note midi number
- *
- * @name noteToMidi
- * @function
- * @param {String} noteName
- * @return {Integer} the note midi number or null if not a valid note name
- */
-Soundfont.noteToMidi = note.midi
-
 if (typeof module === 'object' && module.exports) module.exports = Soundfont
 if (typeof window !== 'undefined') window.Soundfont = Soundfont
 
-},{"./legacy":2,"audio-loader":5,"note-parser":6,"sample-player":8}],2:[function(require,module,exports){
+},{"./legacy":2,"audio-loader":5,"sample-player":8}],2:[function(require,module,exports){
 'use strict'
 
 var parser = require('note-parser')
@@ -223,6 +214,16 @@ function oscillatorPlayer (ctx, defaultOptions) {
     return vco
   }
 }
+
+/**
+ * Given a note name, return the note midi number
+ *
+ * @name noteToMidi
+ * @function
+ * @param {String} noteName
+ * @return {Integer} the note midi number or null if not a valid note name
+ */
+Soundfont.noteToMidi = parser.midi
 
 module.exports = Soundfont
 
