@@ -192,7 +192,7 @@ package of [pre-rendered sound fonts](https://github.com/gleitz/midi-js-soundfon
 | Param | Type | Description |
 | --- | --- | --- |
 | name | <code>String</code> | instrument name |
-| soundfont | <code>String</code> | (Optional) 'FluidR3_GM' or 'MusyngKite' ('FluidR3_GM' by default) |
+| soundfont | <code>String</code> | (Optional) 'FluidR3_GM' or 'MusyngKite' ('MusyngKite' by default) |
 | format | <code>String</code> | (Optional) Can be 'mp3' or 'ogg' (mp3 by default) |
 
 **Example**  
