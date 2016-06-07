@@ -1,5 +1,6 @@
 CHANGELOG
 
+[0.10.1] Update sample-player: add adsr individual parameters to options. New `started` event.
 [0.10.0]
 - Add support to MusyngKite soundfonts.
 - `instrument` can be partially applied with an AudioContext instance

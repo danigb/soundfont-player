@@ -733,7 +733,10 @@ var ADSR = require('adsr')
 var EMPTY = {}
 var DEFAULTS = {
   gain: 1,
-  adsr: [0.01, 0.1, 0.9, 0.3],
+  attack: 0.01,
+  decay: 0.1,
+  sustain: 0.9,
+  release: 0.3,
   loop: false,
   cents: 0,
   loopStart: 0,
@@ -808,6 +811,7 @@ function SamplePlayer (ac, source, options) {
     node.id = track(name, node)
     node.env.start(when)
     node.source.start(when)
+    player.emit('started', when, node.id, node)
     if (opts.duration) node.stop(when + opts.duration)
     return node
   }
@@ -876,7 +880,7 @@ function SamplePlayer (ac, source, options) {
       node.source.disconnect()
       node.env.disconnect()
       node.disconnect()
-      player.emit('ended', now, name)
+      player.emit('ended', now, node.id, node)
     }
     return node.id
   }
@@ -886,8 +890,7 @@ function SamplePlayer (ac, source, options) {
     node.gain.value = 0 // the envelope will control the gain
     node.connect(out)
 
-    node.env = envelope(ac, options.adsr || opts.adsr)
-    node.env.value.value = options.gain || opts.gain
+    node.env = envelope(ac, options, opts)
     node.env.connect(node.gain)
 
     node.source = ac.createBufferSource()
@@ -907,11 +910,15 @@ function SamplePlayer (ac, source, options) {
   }
 }
 
-// create an adsr envelop from array of [a, d, s, r]
-function envelope (ac, adsr) {
+var PARAMS = ['attack', 'decay', 'sustain', 'release']
+function envelope (ac, options, opts) {
   var env = ADSR(ac)
-  env.attack = adsr[0]; env.decay = adsr[1]
-  env.sustain = adsr[2]; env.release = adsr[3]
+  var adsr = options.adsr || opts.adsr
+  PARAMS.forEach(function (name, i) {
+    if (adsr) env[name] = adsr[i]
+    else env[name] = options[name] || opts[name]
+  })
+  env.value.value = options.gain || opts.gain
   return env
 }
 

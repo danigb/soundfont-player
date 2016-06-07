@@ -1,6 +1,7 @@
-# soundfont-player [![npm](https://img.shields.io/npm/v/soundfont-player.svg)](https://www.npmjs.com/package/soundfont-player)
+# soundfont-player [![npm](https://img.shields.io/npm/v/soundfont-player.svg?style=flat-square)](https://www.npmjs.com/package/soundfont-player)
 
-[![Build Status](https://travis-ci.org/danigb/soundfont-player.svg?branch=master)](https://travis-ci.org/danigb/soundfont-player) [![Code Climate](https://codeclimate.com/github/danigb/soundfont-player/badges/gpa.svg)](https://codeclimate.com/github/danigb/soundfont-player) [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](https://github.com/feross/standard) [![license](https://img.shields.io/npm/l/soundfont-player.svg)](https://www.npmjs.com/package/soundfont-player)
+[![Build Status](https://img.shields.io/travis/danigb/soundfont-player/master.svg?style=flat-square)](https://travis-ci.org/danigb/soundfont-player)
+[![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard) [![license](https://img.shields.io/npm/l/soundfont-player.svg?style=flat-square)](https://www.npmjs.com/package/soundfont-player)
 
 A soundfont loader/player to play MIDI sounds using WebAudio API.
 
@@ -23,7 +24,7 @@ It is a much simpler and lightweight replacement for [MIDI.js](https://github.co
 - Easily connect to a Web MIDI API `MidiInput`
 - Schedule a list of notes
 
-It uses [audio-loader](https://github.com/danigb/audio-loader) to load soundfont files and [sample-player](https://github.com/danigb/sample-player) to play the sounds.
+It uses [audio-loader](https://github.com/danigb/audio-loader) to load soundfont files and [soundfont-player](https://github.com/danigb/soundfont-player) to play the sounds.
 
 ## Install
 
@@ -120,7 +121,11 @@ The valid options are:
 - `nameToUrl`: a function to convert from instrument names to URL
 - `destination`: by default Soundfont uses the `audioContext.destination` but you can override it.
 - `gain`: the gain (volume) of the player (1 by default)
-- `adsr`: the amplitude envelope as array of `[attack, decay, sustain, release]`
+- `attack`: the attack time of the amplitude envelope
+- `decay`: the decay time of the amplitude envelope
+- `sustain`: the sustain gain value of the amplitude envelope
+- `release`: the release time of the amplitude envelope
+- `adsr`: the amplitude envelope as array of `[attack, decay, sustain, release]`. It overrides other options.
 - `loop`: set to true to loop audio buffers
 - `notes`: an array of the notes to decode. It can be an array of strings
 with note names or an array of numbers with midi note numbers. This is a
@@ -175,7 +180,7 @@ Schedule a list of events to be played at specific time.
 #### player.listenToMidi(input, options) ⇒ <code>[player](#player)</code>
 Connect a player to a midi input
 
-See [sample-player](https://github.com/danigb/sample-player) for more information.
+See [soundfont-player](https://github.com/danigb/soundfont-player) for more information.
 
 <a name="nameToUrl"></a>
 ## nameToUrl(name, soundfont, format) ⇒ <code>String</code>
@@ -218,7 +223,12 @@ To run pure javascript examples `npm install -g beefy` then `beefy examples/pian
 
 ## Available instruments
 
-Get the json files:
+By default it loads Benjamin Gleitzman's
+[pre-rendered SoundFonts](https://github.com/gleitz/midi-js-soundfonts).
+
+__Instrument names__
+
+You can download the names of the instruments as a .json file:
   - [FluidR3_GM](https://raw.githubusercontent.com/danigb/soundfont-player/master/names/fluidR3.json)
   - [MusyngKite](https://raw.githubusercontent.com/danigb/soundfont-player/master/names/musyngkite.json)
 
