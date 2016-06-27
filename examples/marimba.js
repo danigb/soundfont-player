@@ -1,5 +1,5 @@
-
-var ac = new window.AudioContext()
+var AudioContext = window.AudioContext || window.webkitAudioContext
+var ac = new AudioContext()
 var Soundfont = require('..')
 
 var vca = ac.createGain()

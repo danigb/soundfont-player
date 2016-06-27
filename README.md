@@ -218,7 +218,7 @@ http-server
 
 And open [http://localhost:8080/examples](http://localhost:8080/examples)
 
-To run pure javascript examples `npm install -g beefy` then `beefy examples/piano.js` and navigate to http://localhost:9966/
+To run pure javascript examples `npm install -g beefy` then `beefy examples/marimba.js` and navigate to http://localhost:9966/
 
 
 ## Available instruments
