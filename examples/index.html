@@ -41,6 +41,30 @@
         time += 0.2;
       });
     });
+    
+    // You can also use MIDI inputs, if you have connected ones
+    function onMIDISuccess (midi) {
+      if (!inst.processMidiMessage) {
+        console.log('Loaded soundfont-player doesnt have parsing MIDI ability')
+        return
+      }
+      midi.inputs.forEach(function (port, channelKey) {
+        port.onmidimessage = inst.processMidiMessage
+        console.log('You can play MIDI events on your input %j', port)
+      })
+    }
+    function onMIDIFailure (error) {
+      console.log('Error while loading MIDI API %j', error)
+    }
+    function renewMIDIAccess () {
+      if (window.navigator && typeof window.navigator.requestMIDIAccess === 'function') {
+        console.log('Adding MIDI connection')
+        window.navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure)
+      } else {
+        console.log('MIDI API not available')
+      }
+    }
+    renewMIDIAccess()
 
     var xhr = new XMLHttpRequest();
     xhr.open("GET", "./assets/musyngkite.json");
@@ -66,6 +90,7 @@
           inst.onready(function() {
             console.log("Instrument " + name + " ready.");
             btn.removeAttribute("disabled");
+            renewMIDIAccess()
           });
         });
         label.appendChild(radio);
