@@ -82,7 +82,7 @@ Soundfont.instrument(ac, 'clavinet').then(function (clavinet) {
   // or stop only one
   clavinet.play('C4').stop(ac.currentTime + 0.5)
   // or pass a duration argument to `play`
-  clavinet.play('C4', ac.currentTime, 0.5)
+  clavinet.play('C4', ac.currentTime, { duration: 0.5})
 
 
   // You can connect the instrument to a midi input:
@@ -159,6 +159,17 @@ An alias for `player.start`
 <a name="player.start"></a>
 #### player.start(name, when, options) ⇒ <code>AudioNode</code>
 Start a sample buffer. The returned object has a function `stop(when)` to stop the sound.
+
+Valid options are:
+
+- `gain`: float between 0 to 1
+- `attack`: the attack time of the amplitude envelope
+- `decay`: the decay time of the amplitude envelope
+- `sustain`: the sustain gain value of the amplitude envelope
+- `release`: the release time of the amplitude envelope
+- `adsr`: an array of `[attack, decay, sustain, release]`. Overrides other parameters.
+- `duration`: set the playing duration in seconds of the buffer(s)
+- `loop`: set to true to loop the audio buffer
 
 <a name="player.stop"></a>
 #### player.stop(when, nodes) ⇒ <code>Array</code>
