@@ -772,7 +772,7 @@ function mapBuffers (buffers, toKey) {
   }, {})
 }
 
-},{"note-parser":6}],11:[function(require,module,exports){
+},{"note-parser":15}],11:[function(require,module,exports){
 /* global AudioBuffer */
 'use strict'
 
@@ -816,7 +816,7 @@ function SamplePlayer (ac, source, options) {
   /**
    * @namespace
    */
-  var player = { ac: ac, out: out, opts: opts }
+  var player = { context: ac, out: out, opts: opts }
   if (source instanceof AudioBuffer) player.buffer = source
   else player.buffers = source
 
@@ -853,7 +853,7 @@ function SamplePlayer (ac, source, options) {
     }
 
     var opts = options || EMPTY
-    when = when || ac.currentTime
+    when = Math.max(ac.currentTime, when || 0)
     player.emit('start', when, name, opts)
     var node = createNode(name, buffer, opts)
     node.id = track(name, node)
@@ -868,7 +868,7 @@ function SamplePlayer (ac, source, options) {
    * @see player.start
    * @since 0.3.0
    */
-  player.play = function (n, w, o) { player.start(n, w, o) }
+  player.play = player.start
 
   /**
    * Stop some or all samples
@@ -958,6 +958,7 @@ function SamplePlayer (ac, source, options) {
   }
 }
 
+function isNum (x) { return typeof x === 'number' }
 var PARAMS = ['attack', 'decay', 'sustain', 'release']
 function envelope (ac, options, opts) {
   var env = ADSR(ac)
@@ -966,7 +967,8 @@ function envelope (ac, options, opts) {
     if (adsr) env[name] = adsr[i]
     else env[name] = options[name] || opts[name]
   })
-  env.value.value = options.gain || opts.gain
+  env.value.value = isNum(options.gain) ? options.gain
+    : isNum(opts.gain) ? opts.gain : 1
   return env
 }
 
@@ -1017,7 +1019,7 @@ module.exports = function (player) {
    * ])
    */
   player.schedule = function (time, events) {
-    var now = player.ac.currentTime
+    var now = player.context.currentTime
     var when = time < now ? now : time
     player.emit('schedule', when, events)
     var t, o, note, opts
@@ -1210,4 +1212,155 @@ function getValue(start, end, fromTime, toTime, at){
 (function(e){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=e()}else if(typeof define==="function"&&define.amd){define([],e)}else{var t;if(typeof window!=="undefined"){t=window}else if(typeof global!=="undefined"){t=global}else if(typeof self!=="undefined"){t=self}else{t=this}t.midimessage=e()}})(function(){var e,t,s;return function o(e,t,s){function a(n,i){if(!t[n]){if(!e[n]){var l=typeof require=="function"&&require;if(!i&&l)return l(n,!0);if(r)return r(n,!0);var h=new Error("Cannot find module '"+n+"'");throw h.code="MODULE_NOT_FOUND",h}var c=t[n]={exports:{}};e[n][0].call(c.exports,function(t){var s=e[n][1][t];return a(s?s:t)},c,c.exports,o,e,t,s)}return t[n].exports}var r=typeof require=="function"&&require;for(var n=0;n<s.length;n++)a(s[n]);return a}({1:[function(e,t,s){"use strict";Object.defineProperty(s,"__esModule",{value:true});s["default"]=function(e){function t(e){this._event=e;this._data=e.data;this.receivedTime=e.receivedTime;if(this._data&&this._data.length<2){console.warn("Illegal MIDI message of length",this._data.length);return}this._messageCode=e.data[0]&240;this.channel=e.data[0]&15;switch(this._messageCode){case 128:this.messageType="noteoff";this.key=e.data[1]&127;this.velocity=e.data[2]&127;break;case 144:this.messageType="noteon";this.key=e.data[1]&127;this.velocity=e.data[2]&127;break;case 160:this.messageType="keypressure";this.key=e.data[1]&127;this.pressure=e.data[2]&127;break;case 176:this.messageType="controlchange";this.controllerNumber=e.data[1]&127;this.controllerValue=e.data[2]&127;if(this.controllerNumber===120&&this.controllerValue===0){this.channelModeMessage="allsoundoff"}else if(this.controllerNumber===121){this.channelModeMessage="resetallcontrollers"}else if(this.controllerNumber===122){if(this.controllerValue===0){this.channelModeMessage="localcontroloff"}else{this.channelModeMessage="localcontrolon"}}else if(this.controllerNumber===123&&this.controllerValue===0){this.channelModeMessage="allnotesoff"}else if(this.controllerNumber===124&&this.controllerValue===0){this.channelModeMessage="omnimodeoff"}else if(this.controllerNumber===125&&this.controllerValue===0){this.channelModeMessage="omnimodeon"}else if(this.controllerNumber===126){this.channelModeMessage="monomodeon"}else if(this.controllerNumber===127){this.channelModeMessage="polymodeon"}break;case 192:this.messageType="programchange";this.program=e.data[1];break;case 208:this.messageType="channelpressure";this.pressure=e.data[1]&127;break;case 224:this.messageType="pitchbendchange";var t=e.data[2]&127;var s=e.data[1]&127;this.pitchBend=(t<<8)+s;break}}return new t(e)};t.exports=s["default"]},{}]},{},[1])(1)});
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],15:[function(require,module,exports){
+'use strict'
+
+var REGEX = /^([a-gA-G])(#{1,}|b{1,}|x{1,}|)(-?\d*)\s*(.*)\s*$/
+/**
+ * A regex for matching note strings in scientific notation.
+ *
+ * @name regex
+ * @function
+ * @return {RegExp} the regexp used to parse the note name
+ *
+ * The note string should have the form `letter[accidentals][octave][element]`
+ * where:
+ *
+ * - letter: (Required) is a letter from A to G either upper or lower case
+ * - accidentals: (Optional) can be one or more `b` (flats), `#` (sharps) or `x` (double sharps).
+ * They can NOT be mixed.
+ * - octave: (Optional) a positive or negative integer
+ * - element: (Optional) additionally anything after the duration is considered to
+ * be the element name (for example: 'C2 dorian')
+ *
+ * The executed regex contains (by array index):
+ *
+ * - 0: the complete string
+ * - 1: the note letter
+ * - 2: the optional accidentals
+ * - 3: the optional octave
+ * - 4: the rest of the string (trimmed)
+ *
+ * @example
+ * var parser = require('note-parser')
+ * parser.regex.exec('c#4')
+ * // => ['c#4', 'c', '#', '4', '']
+ * parser.regex.exec('c#4 major')
+ * // => ['c#4major', 'c', '#', '4', 'major']
+ * parser.regex().exec('CMaj7')
+ * // => ['CMaj7', 'C', '', '', 'Maj7']
+ */
+function regex () { return REGEX }
+
+var SEMITONES = [0, 2, 4, 5, 7, 9, 11]
+/**
+ * Parse a note name in scientific notation an return it's components,
+ * and some numeric properties including midi number and frequency.
+ *
+ * @name parse
+ * @function
+ * @param {String} note - the note string to be parsed
+ * @param {Boolean} isTonic - true if the note is the tonic of something.
+ * If true, en extra tonicOf property is returned. It's false by default.
+ * @param {Float} tunning - The frequency of A4 note to calculate frequencies.
+ * By default it 440.
+ * @return {Object} the parsed note name or null if not a valid note
+ *
+ * The parsed note name object will ALWAYS contains:
+ * - letter: the uppercase letter of the note
+ * - acc: the accidentals of the note (only sharps or flats)
+ * - pc: the pitch class (letter + acc)
+ * - step: s a numeric representation of the letter. It's an integer from 0 to 6
+ * where 0 = C, 1 = D ... 6 = B
+ * - alt: a numeric representation of the accidentals. 0 means no alteration,
+ * positive numbers are for sharps and negative for flats
+ * - chroma: a numeric representation of the pitch class. It's like midi for
+ * pitch classes. 0 = C, 1 = C#, 2 = D ... It can have negative values: -1 = Cb.
+ * Can detect pitch class enhramonics.
+ *
+ * If the note has octave, the parser object will contain:
+ * - oct: the octave number (as integer)
+ * - midi: the midi number
+ * - freq: the frequency (using tuning parameter as base)
+ *
+ * If the parameter `isTonic` is set to true, the parsed object will contain:
+ * - tonicOf: the rest of the string that follows note name (left and right trimmed)
+ *
+ * @example
+ * var parse = require('note-parser').parse
+ * parse('Cb4')
+ * // => { letter: 'C', acc: 'b', pc: 'Cb', step: 0, alt: -1, chroma: -1,
+ *         oct: 4, midi: 59, freq: 246.94165062806206 }
+ * // if no octave, no midi, no freq
+ * parse('fx')
+ * // => { letter: 'F', acc: '##', pc: 'F##', step: 3, alt: 2, chroma: 7 })
+ */
+function parse (str, isTonic, tuning) {
+  if (typeof str !== 'string') return null
+  var m = REGEX.exec(str)
+  if (!m || !isTonic && m[4]) return null
+
+  var p = { letter: m[1].toUpperCase(), acc: m[2].replace(/x/g, '##') }
+  p.pc = p.letter + p.acc
+  p.step = (p.letter.charCodeAt(0) + 3) % 7
+  p.alt = p.acc[0] === 'b' ? -p.acc.length : p.acc.length
+  p.chroma = SEMITONES[p.step] + p.alt
+  if (m[3]) {
+    p.oct = +m[3]
+    p.midi = p.chroma + 12 * (p.oct + 1)
+    p.freq = midiToFreq(p.midi, tuning)
+  }
+  if (isTonic) p.tonicOf = m[4]
+  return p
+}
+
+/**
+ * Given a midi number, return its frequency
+ * @param {Integer} midi - midi note number
+ * @param {Float} tuning - (Optional) the A4 tuning (440Hz by default)
+ * @return {Float} frequency in hertzs
+ */
+function midiToFreq (midi, tuning) {
+  return Math.pow(2, (midi - 69) / 12) * (tuning || 440)
+}
+
+var parser = { parse: parse, regex: regex, midiToFreq: midiToFreq }
+var FNS = ['letter', 'acc', 'pc', 'step', 'alt', 'chroma', 'oct', 'midi', 'freq']
+FNS.forEach(function (name) {
+  parser[name] = function (src) {
+    var p = parse(src)
+    return p && (typeof p[name] !== 'undefined') ? p[name] : null
+  }
+})
+
+module.exports = parser
+
+// extra API docs
+/**
+ * Get midi of a note
+ *
+ * @name midi
+ * @function
+ * @param {String} note - the note name
+ * @return {Integer} the midi number of the note or null if not a valid note
+ * or the note does NOT contains octave
+ * @example
+ * var parser = require('note-parser')
+ * parser.midi('A4') // => 69
+ * parser.midi('A') // => null
+ */
+/**
+ * Get freq of a note in hertzs (in a well tempered 440Hz A4)
+ *
+ * @name freq
+ * @function
+ * @param {String} note - the note name
+ * @return {Float} the freq of the number if hertzs or null if not valid note
+ * or the note does NOT contains octave
+ * @example
+ * var parser = require('note-parser')
+ * parser.freq('A4') // => 440
+ * parser.freq('A') // => null
+ */
+
 },{}]},{},[1]);
