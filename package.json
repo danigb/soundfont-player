@@ -29,7 +29,7 @@
   "dependencies": {
     "audio-loader": "^0.5.0",
     "note-parser": "^2.0.0",
-    "sample-player": "^0.5.4"
+    "sample-player": "^0.5.5"
   },
   "devDependencies": {
     "browserify": "^13.1.0",

@@ -863,12 +863,17 @@ function SamplePlayer (ac, source, options) {
     if (opts.duration) node.stop(when + opts.duration)
     return node
   }
+
+  // NOTE: start will be override so we can't copy the function reference
+  // this is obviously not a good design, so this code will be gone soon.
   /**
    * An alias for `player.start`
    * @see player.start
    * @since 0.3.0
    */
-  player.play = player.start
+  player.play = function (name, when, options) {
+    return player.start(name, when, options)
+  }
 
   /**
    * Stop some or all samples
