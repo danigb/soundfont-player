@@ -1,5 +1,10 @@
 CHANGELOG
 
+0.10.6
+- Chenage MusyngKite names to follow Gleitz renames (thanks @kirlen)
+- Add yarn.lock
+- Update dependencies
+
 [0.10.4] Update sample-player (`gain: 0` option is not ignored, `start` and `play` are the same function)
 [0.10.1] Update sample-player: add adsr individual parameters to options. New `started` event.
 [0.10.0]
