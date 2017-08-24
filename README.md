@@ -24,7 +24,7 @@ It is a much simpler and lightweight replacement for [MIDI.js](https://github.co
 - Easily connect to a Web MIDI API `MidiInput`
 - Schedule a list of notes
 
-It uses [audio-loader](https://github.com/danigb/audio-loader) to load soundfont files and [soundfont-player](https://github.com/danigb/soundfont-player) to play the sounds.
+It uses [audio-loader](https://github.com/danigb/audio-loader) to load soundfont files and [sample-player](https://github.com/danigb/sample-player) to play the sounds.
 
 ## Install
 
