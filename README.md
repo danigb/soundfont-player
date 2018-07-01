@@ -16,7 +16,7 @@ Soundfont.instrument(new AudioContext(), 'acoustic_grand_piano').then(function (
 
 It is a much simpler and lightweight replacement for [MIDI.js](https://github.com/mudcube/MIDI.js) soundfont loader (MIDI.js is much bigger, capable of play midi files, for example, but it weights an order of magnitude more).
 
-## Features
+## Features
 
 - Load soundfont files in MIDI.js format or json format.
 - Unlimited poliphony (and stop all sounds with a single function call)
@@ -97,7 +97,7 @@ Soundfont.instrument(ac, 'clavinet').then(function (clavinet) {
 })
 ```
 
-## API
+## API
 
 __< 0.9.x users__: The API in the 0.9.x releases has been changed and some features are going to be removed (like oscillators). While 0.9.0 adds warnings to the deprecated API, the 1.0.0 will remove the support.
 
