@@ -132,7 +132,7 @@ export declare type Player = {
   start: (
     name: string,
     when?: number,
-    options?: {
+    options?: Partial<{
       gain: number;
       attack: number;
       decay: number;
@@ -141,7 +141,7 @@ export declare type Player = {
       adsr: [number, number, number, number];
       duration: number;
       loop: boolean;
-    }
+    }>
   ) => AudioNode;
   play: Player["start"];
   stop: (when?: number, nodes?: AudioNode[]) => AudioNode[];
