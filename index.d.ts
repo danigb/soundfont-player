@@ -142,7 +142,7 @@ export declare type Player = {
       duration: number;
       loop: boolean;
     }>
-  ) => AudioNode;
+  ) => Player;
   play: Player["start"];
   stop: (when?: number, nodes?: AudioNode[]) => AudioNode[];
   on: (event: string, callback: (a?: any) => void) => Player;
