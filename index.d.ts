@@ -130,7 +130,7 @@ declare type InstrumentName =
 
 export declare type Player = {
   start: (
-    name: string,
+    name: number,
     when?: number,
     options?: Partial<{
       gain: number;
@@ -151,7 +151,7 @@ export declare type Player = {
   listenToMidi: (midiInput: any, options?: any) => Player;
 };
 export declare const instrument: (
-  ac: typeof AudioContext,
+  ac: AudioContext,
   name: InstrumentName,
   options?: any
 ) => Promise<Player>;
