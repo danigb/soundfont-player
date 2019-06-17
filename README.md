@@ -140,7 +140,7 @@ limit the number of notes you want and reduce the time to load the instrument.
 
 **Example**  
 ```js
-var Soundfont = require('sounfont-player')
+var Soundfont = require('soundfont-player')
 var ac = new AudioContext()
 Soundfont.instrument(ac, 'marimba', { soundfont: 'MusyngKite' }).then(function (marimba) {
   marimba.play('C4')
