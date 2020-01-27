@@ -1,11 +1,11 @@
 {
   "name": "soundfont-player",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Lightweight soundfont (music instrument) loader and player for WebAudio API",
   "main": "lib/index.js",
   "scripts": {
     "test": "mocha && echo 'ESLINT...' && eslint lib/*.js && echo 'Done.'",
-    "dist": "browserify lib/index.js > dist/soundfont-player.js && uglifyjs dist/soundfont-player.js > dist/soundfont-player.min.js",
+    "build:dist": "browserify lib/index.js > dist/soundfont-player.js && uglifyjs dist/soundfont-player.js > dist/soundfont-player.min.js",
     "api": "jsdoc2md lib/index.js > API.md",
     "prepublish": "npm test && npm run dist"
   },
@@ -13,14 +13,7 @@
     "type": "git",
     "url": "https://github.com/danigb/soundfont-player"
   },
-  "keywords": [
-    "music",
-    "audio",
-    "waa",
-    "webaudio",
-    "soundfont",
-    "midi"
-  ],
+  "keywords": ["music", "audio", "waa", "webaudio", "soundfont", "midi"],
   "author": "danigb <danigb@gmail.com>",
   "license": "MIT",
   "bugs": {
@@ -39,7 +32,7 @@
     "eslint-plugin-node": "^5.1.0",
     "eslint-plugin-promise": "^3.5.0",
     "eslint-plugin-standard": "^3.0.1",
-    "mocha": "*",
+    "mocha": "^5",
     "uglify-js": "^3.0.24",
     "web-audio-test-api": "^0.5.2"
   }
