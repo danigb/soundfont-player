@@ -151,7 +151,7 @@ export declare type Player = {
   listenToMidi: (midiInput: any, options?: any) => Player;
 };
 export declare const instrument: (
-  ac: typeof AudioContext,
+  ac: AudioContext,
   name: InstrumentName,
   options?: any
 ) => Promise<Player>;
