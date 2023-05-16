@@ -3,6 +3,9 @@
 [![Build Status](https://img.shields.io/travis/danigb/soundfont-player/master.svg?style=flat-square)](https://travis-ci.org/danigb/soundfont-player)
 [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard) [![license](https://img.shields.io/npm/l/soundfont-player.svg?style=flat-square)](https://www.npmjs.com/package/soundfont-player)
 
+⚠️ Archived. There are better alternatives. This is one of it: https://github.com/danigb/smplr Thanks for the fish! ⚠️
+
+
 A soundfont loader/player to play MIDI sounds using WebAudio API.
 
 It loads Benjamin Gleitzman's package of
